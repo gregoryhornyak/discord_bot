@@ -21,6 +21,13 @@ SIGN+COMMAND -> ARGUMENTS:[OPT]
 - Scoreboard | DB1: name - point per event - total points seasonal
 - Input logs | DB2: timestamp - author - event - guess
 
+|Scoreboard|Input logs|
+|-|-|
+|name|timestamp|
+|points/event|author|
+|total points|event|
+||guess|
+
 
 ## Github commands
 
