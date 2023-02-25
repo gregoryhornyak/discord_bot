@@ -58,6 +58,13 @@ async def whoami(ctx):
         await ctx.send(f"You are {ctx.author.name}")
 
 @bot.command()
+async def button(ctx):
+    view = discord.ui.View()
+    button = discord.ui.Button(label="Nuke Israel")
+    view.add_item(button)
+    await ctx.send(view=view)
+
+@bot.command()
 async def what(ctx):
     await ctx.send("""To guess a score: SIGN+guess -> SCORE
 To see every guess: SIGN+board
@@ -102,6 +109,40 @@ async def _bot(ctx):
     await ctx.send('Yes, the bot is cool.')
 
 
-TOKEN = 'MTA3ODQyNTM4ODE4ODk3NTEwNA.GGFXVa.liDofuZhcmrVSDWCHhQz01C4vvwB34ElErwg-k'
+TOKEN = 'MTA3ODQyNTM4ODE4ODk3NTEwNA.GLbQLC.ifxTnJ5KUuL912FEIEZHNq8N_JdnvGkG7Ilbj0'
 
 bot.run(TOKEN)
+
+
+"""
+Timestamp + Author - auto
+make a guess:
+!TIPP EVENT GUESS[STRING/BOOL]
+
+!SHOWLAST -
+# show everyone's last guesses and total_points
+
+---------------------------
+API request | RapidAPI
+
+filter by criteria
+
+save values/scores
+
+match name with guess_name
+
+hand out given amount of point to user
+
+DB1:
+name - point - per event - total_points(seasonal)
+
+DB2:
+input logs:
+timestamp - author - event - guess
+
+DB3: optional
+results
+
+Race schedule: GMT +0
+
+"""
