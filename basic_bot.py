@@ -4,6 +4,9 @@ import discord
 from discord.ext import commands
 import random
 
+import f1_schedule
+import db_manager
+
 description = '''An example bot to showcase the discord.ext.commands extension
 module.
 
@@ -45,6 +48,24 @@ async def roll(ctx, dice: str):
 async def choose(ctx, *choices: str):
     """Chooses between multiple choices."""
     await ctx.send(random.choice(choices))
+
+@bot.command()
+async def guess(ctx,event,guess):
+    # prepare arguments
+    present = f1_schedule.get_present(as_str=True)
+    user = ctx.author.name
+    # store input
+    db_manager.append_db('db1.json',present,user,event,guess)
+    # reply
+    await ctx.send(f'Your guess {guess} for {event} has been saved.')
+
+    
+@bot.command()
+async def next(ctx):
+    session_dates = f1_schedule.get_future_sessions()
+    await ctx.send('Lemme find it...')
+    await ctx.send(f'The next event is on {session_dates[0]}')
+
 
 @bot.command()
 async def dako(ctx, length):
