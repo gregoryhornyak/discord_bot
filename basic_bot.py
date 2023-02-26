@@ -18,10 +18,9 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', description=description, intents=intents)
 
-
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user} (ID: {bot.user.id})')
+    print(f'Logged in as {bot.user}')
     print('------')
 
 
@@ -59,13 +58,18 @@ async def guess(ctx,event,guess):
     # reply
     await ctx.send(f'Your guess {guess} for {event} has been saved.')
 
-    
+@bot.command()
+async def showlast(ctx):
+    present = f1_schedule.get_present(as_str=True)
+    user = ctx.author.name
+    date,latest = db_manager.last_entry('db1.json',user,present)
+    await ctx.send(f'Your last guess was:\n{date}:\n{latest}')
+
 @bot.command()
 async def next(ctx):
     session_dates = f1_schedule.get_future_sessions()
     await ctx.send('Lemme find it...')
     await ctx.send(f'The next event is on {session_dates[0]}')
-
 
 @bot.command()
 async def dako(ctx, length):

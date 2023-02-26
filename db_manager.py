@@ -51,5 +51,18 @@ def append_db(db_name,present,user,event,guess):
     """
     return 0
 
+def last_entry(db_name,user,present):
+    db = read_db(db_name)
+    latest = '2023-01-01'
+    for k,v in db.items():
+        print(k,v)
+        if v['user'] == user:
+            if k > latest:
+                latest = k
+    return latest,db[latest]
+
+
 if __name__ == "__main__":
-    append_db('db1.json','2023-02-30','GregHornyak','R','Hamilton')
+    append_db('db1.json','2023-02-12','GregHornyak','R','Hamilton')
+    append_db('db1.json','2023-02-18','GregHornyak','Q','Perez')
+    last_entry('db1.json','GregHornyak','2023-02-30')
