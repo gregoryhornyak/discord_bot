@@ -45,9 +45,10 @@ def append_db(db_name,present,user,event,guess):
     db[present]['guess'] = guess
     with open(db_name,'w') as f:
         json.dump(db,f)
+    """
     for k,v in db.items():
         print(k,v)
-
+    """
     return 0
 
 if __name__ == "__main__":
