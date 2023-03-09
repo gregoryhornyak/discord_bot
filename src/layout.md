@@ -15,6 +15,8 @@
         - ThirdPlace
         - BestOfTheRest
 
+    - + Sprint Race
+
     - Race:
         - FirstPlace
         - SecondPlace

@@ -3,7 +3,7 @@
 import discord
 from discord.ext import commands
 import random
-
+import asyncio
 import f1_schedule
 import db_manager
 
@@ -49,6 +49,12 @@ async def choose(ctx, *choices: str):
     await ctx.send(random.choice(choices))
 
 @bot.command()
+async def xbox(ctx):
+    print("img request")
+    await ctx.send(file=discord.File('my_image.jpeg'))
+    print("sent image")
+
+@bot.command()
 async def guess(ctx,event,guess):
     # prepare arguments
     present = f1_schedule.get_present(as_str=True)
@@ -76,6 +82,7 @@ async def dako(ctx, length):
     mid = "="
     mid += "="*int(length)
     await ctx.send(f"8{mid}D")
+
 
 @bot.command()
 async def whoami(ctx):
@@ -133,7 +140,6 @@ async def _bot(ctx):
     """Is the bot cool?"""
     await ctx.send('Yes, the bot is cool.')
 
-
 TOKEN = 'MTA3ODQyNTM4ODE4ODk3NTEwNA.GLbQLC.ifxTnJ5KUuL912FEIEZHNq8N_JdnvGkG7Ilbj0'
 
 bot.run(TOKEN)
@@ -169,5 +175,11 @@ DB3: optional
 results
 
 Race schedule: GMT +0
+
+------
+
+At one time: guess for all types
+
+
 
 """

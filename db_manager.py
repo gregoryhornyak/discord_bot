@@ -55,7 +55,7 @@ def last_entry(db_name,user,present):
     db = read_db(db_name)
     latest = '2023-01-01'
     for k,v in db.items():
-        print(k,v)
+        #print(k,v)
         if v['user'] == user:
             if k > latest:
                 latest = k
