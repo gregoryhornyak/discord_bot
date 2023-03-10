@@ -4,9 +4,9 @@ Automated bot for a Discord server
 
 ## Pipeline
 
-1. User guesses result
+1. User guesses F1 result
 2. Result is stored in database
-3. After race, results and guesses are compared
+3. After race/event, results and guesses are compared
 4. Scores for each player are evaluated
 5. Repeat
 
@@ -38,3 +38,11 @@ git commit -m "MESSAGE"
 git status
 git push
 ```
+
+## Contributors
+
+J. Gergely Hornyak
+Gabor Korecz **as revisioning**
+
+
+---

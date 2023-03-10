@@ -81,8 +81,10 @@ async def next(ctx):
 async def dako(ctx, length):
     mid = "="
     mid += "="*int(length)
-    await ctx.send(f"8{mid}D")
-
+    if int(length) < 41:
+        await ctx.send(f"itt egy meretes fasz csak neked:\n8{mid}D")
+    else:
+        await ctx.send(f'ekkora dakoval hogy tudsz te létezni?')
 
 @bot.command()
 async def whoami(ctx):
@@ -144,6 +146,10 @@ TOKEN = 'MTA3ODQyNTM4ODE4ODk3NTEwNA.GLbQLC.ifxTnJ5KUuL912FEIEZHNq8N_JdnvGkG7Ilbj
 
 bot.run(TOKEN)
 
+print(f'Bot has been terminated')
+
+#@bot.event
+#async def on_end
 
 """
 Timestamp + Author - auto
