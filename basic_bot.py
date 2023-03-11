@@ -6,6 +6,7 @@ import random
 import asyncio
 import f1_schedule
 import db_manager
+import sys
 
 description = '''An example bot to showcase the discord.ext.commands extension
 module.
@@ -142,11 +143,19 @@ async def _bot(ctx):
     """Is the bot cool?"""
     await ctx.send('Yes, the bot is cool.')
 
-TOKEN = "idk"
+def main():
 
-bot.run(TOKEN)
+    print(f'{sys.argv[0] = }')
+    print(f'{sys.argv[1] = }')
 
-print(f'Bot has been terminated')
+    TOKEN = sys.argv[1]
+
+    bot.run(TOKEN)
+
+    print(f'Bot has been terminated')
+
+if __name__ == "__main__":
+    main()
 
 #@bot.event
 #async def on_end
