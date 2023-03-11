@@ -144,6 +144,8 @@ async def _bot(ctx):
 
 TOKEN = "idk"
 
+
+
 bot.run(TOKEN)
 
 print(f'Bot has been terminated')
