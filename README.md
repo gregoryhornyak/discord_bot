@@ -28,6 +28,7 @@ SIGN+COMMAND -> ARGUMENTS:[OPT]
 |total points|event|
 ||guess|
 
+[The layout](docs/layout.md)
 
 ## Github commands
 
