@@ -1,0 +1,54 @@
+
+TIMESTAMP: 2023-04-12 23:08:43.229572
+DIRECTION: output
+FUNCTION_NAME: szeretsz_elni
+USER: GregHornyak
+>-----<
+TIMESTAMP: 2023-04-12 23:12:57.388286
+DIRECTION: output
+FUNCTION_NAME: szeretsz_elni
+USER: GregHornyak
+>-----<
+TIMESTAMP: 2023-04-12 23:13:57.193062
+DIRECTION: output
+FUNCTION_NAME: szeretsz_elni
+USER: GregHornyak
+>-----<
+TIMESTAMP: 2023-04-12 23:14:14.188177
+DIRECTION: output
+FUNCTION_NAME: szeretsz_elni
+USER: GregHornyak
+DATA: 9
+>-----<
+TIMESTAMP: 2023-04-12 23:20:52.735053
+DIRECTION: output
+FUNCTION_NAME: dako
+USER: GregHornyak
+DATA: length: 9
+>-----<
+TIMESTAMP: 2023-04-12 23:20:56.644233
+DIRECTION: output
+FUNCTION_NAME: dako
+USER: GregHornyak
+DATA: length: 5
+>-----<
+TIMESTAMP: 2023-04-12 23:21:04.427760
+DIRECTION: output
+FUNCTION_NAME: dako
+USER: GregHornyak
+DATA: length: 43
+>-----<
+TIMESTAMP: 2023-04-12 23:23:42.235716
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: Anyad
+guess: kövér
+>-----<
+TIMESTAMP: 2023-04-12 23:24:33.819339
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: Round
+	guess: 5
+>-----<

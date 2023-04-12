@@ -4,13 +4,15 @@ import discord
 from discord.ext import commands
 import random
 import asyncio
-import f1_schedule
-import db_manager
+import datetime
 import sys
+import inspect
+sys.path.append('../src')
+from include import f1_schedule
+from include import db_manager
+from include import logging_machine
 
-description = '''An example bot to showcase the discord.ext.commands extension
-module.
-
+description = '''An example bot to showcase the discord.ext.commands extension module.
 There are a number of utility commands being showcased here.'''
 
 intents = discord.Intents.default()
@@ -23,7 +25,6 @@ bot = commands.Bot(command_prefix='!', description=description, intents=intents)
 async def on_ready():
     print(f'Logged in as {bot.user}')
     print('------')
-
 
 @bot.command()
 async def add(ctx, left: int, right: int):
@@ -57,6 +58,11 @@ async def xbox(ctx):
 
 @bot.command()
 async def guess(ctx,event,guess):
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'input', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"event: {event}\n\tguess: {guess}")
     # prepare arguments
     present = f1_schedule.get_present(as_str=True)
     user = ctx.author.name
@@ -80,6 +86,11 @@ async def next(ctx):
 
 @bot.command()
 async def dako(ctx, length):
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"length: {length}")
     mid = "="
     mid += "="*int(length)
     if int(length) < 41:
@@ -89,6 +100,10 @@ async def dako(ctx, length):
 
 @bot.command()
 async def whoami(ctx):
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name)
     for i in range(1):
         await ctx.send(f"You are {ctx.author.name}")
 
@@ -101,6 +116,10 @@ async def button(ctx):
 
 @bot.command()
 async def what(ctx):
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name)
     await ctx.send("""To guess a score: SIGN+guess -> SCORE
 To see every guess: SIGN+board
 To only see your guesses: SIGN+myboard""")
@@ -112,6 +131,10 @@ async def joined(ctx, member: discord.Member):
 
 @bot.command()
 async def lajos(ctx):
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                        'output', 
+                                        inspect.currentframe().f_code.co_name,
+                                        ctx.author.name)
     script = """-Szia Lajos.
 -Szia bazdmeg! Kutyáidat sétáltatod?
 -Hát bazdmeg
@@ -125,6 +148,23 @@ async def lajos(ctx):
 -Hát ja
 -Na jólvan szia
 -Szia"""
+    for line in script.split('\n'):
+        await ctx.send(line)
+
+@bot.command()
+async def szeretsz_elni(ctx):
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name)
+    script = """- Az lenne a kérdés hogy szeretek-e élni?
+    - Élni? A gyász! ... 
+    meg a ... 
+    hogyhijjáka a gyász ... 
+    meg a szenvedés ...
+    Az az életem. :|
+    - Tehát akkor annyira nem szeretsz élni? :)
+    """
     for line in script.split('\n'):
         await ctx.send(line)
 
@@ -156,45 +196,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#@bot.event
-#async def on_end
-
-"""
-Timestamp + Author - auto
-make a guess:
-!TIPP EVENT GUESS[STRING/BOOL]
-
-!SHOWLAST -
-# show everyone's last guesses and total_points
-
----------------------------
-API request | RapidAPI
-
-filter by criteria
-
-save values/scores
-
-match name with guess_name
-
-hand out given amount of point to user
-
-DB1:
-name - point - per event - total_points(seasonal)
-
-DB2:
-input logs:
-timestamp - author - event - guess
-
-DB3: optional
-results
-
-Race schedule: GMT +0
-
-------
-
-At one time: guess for all types
-
-
-
-"""
