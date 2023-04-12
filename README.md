@@ -2,48 +2,52 @@
 
 Automated bot for a Discord server
 
-## Pipeline
+## Key Features
 
-1. User guesses F1 result
-2. Result is stored in database
-3. After race/event, results and guesses are compared
-4. Scores for each player are evaluated
-5. Repeat
+- Running continuously
+- User can store guesses
+- User can retrieve their guesses
+- Updating database, based on official results
+- The score for each user can be retrieved
+- Bot can work in DM as well
+- Bot can work parallelly, having multiple clients
 
-## Commands
+---
 
-```
-SIGN+COMMAND -> ARGUMENTS:[OPT]
-```
+## Use case
 
-## Structure
+Open up Discord
 
-- Scoreboard | DB1: name - point per event - total points seasonal
-- Input logs | DB2: timestamp - author - event - guess
+Add the bot to your friends / join the group which involves it
 
-|Scoreboard|Input logs|
-|-|-|
-|name|timestamp|
-|points/event|author|
-|total points|event|
-||guess|
+IF you want to make a guess:
 
-[The layout](docs/layout.md)
+`!guess event score`
 
-## Github commands
+> the event is the name of the event, score is a number.
 
-```
-git pull
-git add FILE
-git commit -m "MESSAGE"
-git status
-git push
-```
+e.g. `!guess Top1 Verstappen` produces a guess of Verstappen being in the Top1.
+
+---
+
+## System info
+
+This bot was designed on Linux, meaning the setup is optimised for Linux distros.
+
+---
+
+## Components
+
+The core app, reading the inputs, dealing with the database and responding to the user.
+
+The database manager, handling the storing and retrieving actions.
+
+The F1-API, a python package fetching the F1 race data.
+
+---
 
 ## Contributors
 
 J. Gergely Hornyak
 Gabor Korecz **as revisioning**
 
-
----
