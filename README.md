@@ -14,6 +14,14 @@ Automated bot for a Discord server
 
 ---
 
+## Content of repository
+
+- [Layout](docs/layout.md)
+- [Commands](docs/commands.md)
+- [User Stories](docs/user_stories.md)
+
+---
+
 ## Use case
 
 Open up Discord
