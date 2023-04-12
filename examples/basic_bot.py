@@ -72,6 +72,10 @@ async def guess(ctx,event,guess):
     await ctx.send(f'Your guess {guess} for {event} has been saved.')
 
 @bot.command()
+async def note(ctx,*notes):
+    print(f"notes: {notes}")
+
+@bot.command()
 async def showlast(ctx):
     present = f1_schedule.get_present(as_str=True)
     user = ctx.author.name
