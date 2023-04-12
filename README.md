@@ -57,5 +57,6 @@ The F1-API, a python package fetching the F1 race data.
 ## Contributors
 
 J. Gergely Hornyak
+
 Gabor Korecz **as revisioning**
 
