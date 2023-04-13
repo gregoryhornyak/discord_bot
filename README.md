@@ -1,5 +1,7 @@
 # Custom Formula One Discord Bot
 
+[![Version](https://badge.fury.io/gh/tterb%2FHyde.svg)](https://badge.fury.io/gh/tterb%2FHyde)
+
 Automated bot for a Discord server
 
 ## Key Features
