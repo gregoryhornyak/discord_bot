@@ -4,6 +4,8 @@
 
 Automated bot for a Discord server
 
+![screenshot from Discord](src/images/screenshot01.jpg)
+
 ## Key Features
 
 - Running continuously

@@ -52,3 +52,17 @@ USER: GregHornyak
 DATA: event: Round
 	guess: 5
 >-----<
+TIMESTAMP: 2023-04-18 08:39:37.551418
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: RoundRace
+	guess: Verstappen
+>-----<
+TIMESTAMP: 2023-04-18 09:03:27.061415
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: RoundRace
+	guess: Verstappen
+>-----<

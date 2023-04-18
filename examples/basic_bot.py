@@ -11,6 +11,9 @@ sys.path.append('../src')
 from include import f1_schedule
 from include import db_manager
 from include import logging_machine
+import os
+
+TOKEN_PATH = "../src/discord_token/token"
 
 description = '''An example bot to showcase the discord.ext.commands extension module.
 There are a number of utility commands being showcased here.'''
@@ -189,10 +192,12 @@ async def _bot(ctx):
 
 def main():
 
-    print(f'{sys.argv[0] = }')
-    print(f'{sys.argv[1] = }')
+    current_directory = os.getcwd()
+    print(current_directory)
 
-    TOKEN = sys.argv[1]
+
+    with open(TOKEN_PATH,"r") as t:
+        TOKEN = t.read()
 
     bot.run(TOKEN)
 
