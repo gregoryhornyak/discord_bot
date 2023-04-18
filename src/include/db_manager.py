@@ -26,7 +26,7 @@ def check_db_exists(db_name):
         return False
 
 def write_db(db_name):
-    db = {'TIMESTAMP':{'EVENT':'','USER':'','GUESS':''}}
+    db = {'TIMESTAMP':{'event':'','user':'','guess':''}}
     db_name = "../src/databases/"+db_name
     with open(db_name,'w') as f:
         json.dump(db,f)

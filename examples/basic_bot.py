@@ -55,9 +55,9 @@ async def choose(ctx, *choices: str):
 
 @bot.command()
 async def xbox(ctx):
-    print("img request")
-    await ctx.send(file=discord.File('my_image.jpeg'))
-    print("sent image")
+    print("image requested")
+    await ctx.send(file=discord.File('../src/images/my_image.jpeg'))
+    print("image sent")
 
 @bot.command()
 async def guess(ctx,event,guess):
@@ -75,11 +75,16 @@ async def guess(ctx,event,guess):
     await ctx.send(f'Your guess {guess} for {event} has been saved.')
 
 @bot.command()
-async def note(ctx,*notes):
+async def note(ctx,*notes): # input should be wrapped with " " to store as single word/sentence
     print(f"notes: {notes}")
 
 @bot.command()
 async def showlast(ctx):
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"last entry request")
     present = f1_schedule.get_present(as_str=True)
     user = ctx.author.name
     date,latest = db_manager.last_entry('db1.json',user,present)
@@ -87,8 +92,13 @@ async def showlast(ctx):
 
 @bot.command()
 async def next(ctx):
-    session_dates = f1_schedule.get_future_sessions()
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"next event request")
     await ctx.send('Lemme find it...')
+    session_dates = f1_schedule.get_future_sessions()
     await ctx.send(f'The next event is on {session_dates[0]}')
 
 @bot.command()
@@ -190,14 +200,30 @@ async def _bot(ctx):
     """Is the bot cool?"""
     await ctx.send('Yes, the bot is cool.')
 
+
 def main():
 
     current_directory = os.getcwd()
     print(current_directory)
 
+    if len(sys.argv) < 2:
+        print("Usage: python3 module token")
+        sys.exit(1)
 
-    with open(TOKEN_PATH,"r") as t:
-        TOKEN = t.read()
+    if len(sys.argv)==2:
+        filename = sys.argv[1]
+        try:
+            with open(filename, "r") as f:
+                TOKEN = f.read()
+                print("Token found")
+        except FileNotFoundError:
+            print(f"Error: file '{filename}' not found.")
+            sys.exit(1)
+
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'start-up', 
+                                          inspect.currentframe().f_code.co_name,
+                                          "server")
 
     bot.run(TOKEN)
 

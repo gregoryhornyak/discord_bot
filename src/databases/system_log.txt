@@ -1,68 +1,117 @@
-
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:08:43.229572
 DIRECTION: output
 FUNCTION_NAME: szeretsz_elni
 USER: GregHornyak
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:12:57.388286
 DIRECTION: output
 FUNCTION_NAME: szeretsz_elni
 USER: GregHornyak
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:13:57.193062
 DIRECTION: output
 FUNCTION_NAME: szeretsz_elni
 USER: GregHornyak
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:14:14.188177
 DIRECTION: output
 FUNCTION_NAME: szeretsz_elni
 USER: GregHornyak
 DATA: 9
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:20:52.735053
 DIRECTION: output
 FUNCTION_NAME: dako
 USER: GregHornyak
 DATA: length: 9
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:20:56.644233
 DIRECTION: output
 FUNCTION_NAME: dako
 USER: GregHornyak
 DATA: length: 5
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:21:04.427760
 DIRECTION: output
 FUNCTION_NAME: dako
 USER: GregHornyak
 DATA: length: 43
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:23:42.235716
 DIRECTION: input
 FUNCTION_NAME: guess
 USER: GregHornyak
 DATA: event: Anyad
 guess: kövér
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-12 23:24:33.819339
 DIRECTION: input
 FUNCTION_NAME: guess
 USER: GregHornyak
 DATA: event: Round
 	guess: 5
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-18 08:39:37.551418
 DIRECTION: input
 FUNCTION_NAME: guess
 USER: GregHornyak
 DATA: event: RoundRace
 	guess: Verstappen
->-----<
+>-----------------------------------<
 TIMESTAMP: 2023-04-18 09:03:27.061415
 DIRECTION: input
 FUNCTION_NAME: guess
 USER: GregHornyak
 DATA: event: RoundRace
 	guess: Verstappen
->-----<
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:39:36.615490
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: anyad
+	guess: meg
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:46:24.168613
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: 4
+	guess: 5
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:47:07.585096
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: RoundRace
+	guess: Verstappen
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:55:31.706291
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:56:17.883742
+DIRECTION: output
+FUNCTION_NAME: lajos
+USER: GregHornyak
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:57:31.679403
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:57:47.074909
+DIRECTION: input
+FUNCTION_NAME: guess
+USER: GregHornyak
+DATA: event: 67
+	guess: 34
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 09:57:52.194378
+DIRECTION: output
+FUNCTION_NAME: showlast
+USER: GregHornyak
+DATA: last entry request
+>-----------------------------------<

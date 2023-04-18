@@ -29,7 +29,7 @@ def createLog(timestamp, direction, function_name, user, **data) -> str:
             user_data = data["data"]
             message += f"\nDATA: {user_data}"
     except: pass
-    message += "\n>-----<"
+    message += "\n>-----------------------------------<"
     writeLog(message)
 
 def writeLog(message) -> None:
