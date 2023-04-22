@@ -29,6 +29,19 @@ async def on_ready():
     print(f'Logged in as {bot.user}')
     print('------')
 
+@bot.event
+async def on_message_edit():
+    print("A message has been changed\n------")
+
+@bot.event
+async def on_disconnect():
+    print("Disconnected")
+
+@bot.command()
+async def goodbye(ctx):
+    await ctx.send("BOT SHUTDOWN")
+    await bot.close()
+
 @bot.command()
 async def add(ctx, left: int, right: int):
     """Adds two numbers together."""
@@ -226,6 +239,11 @@ def main():
                                           "server")
 
     bot.run(TOKEN)
+
+    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'shutdown', 
+                                          inspect.currentframe().f_code.co_name,
+                                          "server")
 
     print(f'Bot has been terminated')
 
