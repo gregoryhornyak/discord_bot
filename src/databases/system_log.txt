@@ -115,3 +115,68 @@ FUNCTION_NAME: showlast
 USER: GregHornyak
 DATA: last entry request
 >-----------------------------------<
+TIMESTAMP: 2023-04-18 10:05:58.729141
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-18 10:06:04.644568
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:40:15.278594
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:40:57.770810
+DIRECTION: output
+FUNCTION_NAME: lajos
+USER: GregHornyak
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:44:12.666822
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:46:19.732851
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:47:41.185547
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:47:52.211809
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:52:13.823300
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:52:15.021306
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:55:27.113680
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:56:58.148859
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-22 10:57:09.571597
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
