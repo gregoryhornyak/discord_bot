@@ -43,6 +43,20 @@ async def goodbye(ctx):
     await bot.close()
 
 @bot.command()
+async def valasztas(ctx):
+    select = discord.ui.Select(placeholder="Válassz fakciót!",options=[
+        discord.SelectOption(label="FIDESZ", description="Mindig győz"),
+        discord.SelectOption(label="DK", description="Gyurcsótány")
+    ])
+    view = discord.ui.View()
+    view.add_item(select)
+
+    async def my_callback(interaction):
+        await interaction.response.send_message(f"Te a {select.values[0]}-t választottad.")
+    select.callback = my_callback
+    await ctx.send("Válassz fakciót!", view=view)
+
+@bot.command()
 async def add(ctx, left: int, right: int):
     """Adds two numbers together."""
     await ctx.send(left + right)
