@@ -20,6 +20,7 @@ Automated bot for a Discord server
 
 ## Content of repository
 
+- [Rules](docs/rulebook.md)
 - [Layout](docs/layout.md)
 - [Commands](docs/commands.md)
 - [User Stories](docs/user_stories.md)
