@@ -226,3 +226,80 @@ DIRECTION: shutdown
 FUNCTION_NAME: main
 USER: server
 >-----------------------------------<
+TIMESTAMP: 2023-04-23 09:13:52.353616
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:34:52.568636
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:34:54.145827
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:36:22.435310
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:36:24.021505
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:55:45.571064
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:55:48.324811
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:56:04.924216
+DIRECTION: choice
+FUNCTION_NAME: driver_callback
+USER: GregHornyak
+DATA: guessed driver: Perez
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 09:57:04.128269
+DIRECTION: choice
+FUNCTION_NAME: race_callback
+USER: GregHornyak
+DATA: guessed race type: FP3
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 10:35:02.827485
+DIRECTION: output
+FUNCTION_NAME: lajos
+USER: GregHornyak
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 10:50:01.903697
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 10:52:20.009924
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 10:53:04.586274
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 10:53:05.737911
+DIRECTION: start-up
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<
+TIMESTAMP: 2023-04-23 10:53:36.635965
+DIRECTION: shutdown
+FUNCTION_NAME: main
+USER: server
+>-----------------------------------<

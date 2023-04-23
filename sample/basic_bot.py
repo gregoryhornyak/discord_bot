@@ -44,17 +44,37 @@ async def goodbye(ctx):
 
 @bot.command()
 async def valasztas(ctx):
-    select = discord.ui.Select(placeholder="Válassz fakciót!",options=[
-        discord.SelectOption(label="FIDESZ", description="Mindig győz"),
-        discord.SelectOption(label="DK", description="Gyurcsótány")
-    ])
-    view = discord.ui.View()
-    view.add_item(select)
+    f1_drivers = ["Hamilton", "Verstappen","Perez","Alonso","Sainz","Stroll","Russel"]
+    f1_races = ["FP1","FP2","FP3","Q","R"]
 
-    async def my_callback(interaction):
-        await interaction.response.send_message(f"Te a {select.values[0]}-t választottad.")
-    select.callback = my_callback
-    await ctx.send("Válassz fakciót!", view=view)
+    select_driver = discord.ui.Select(placeholder="Válassz sofőrt!",options=
+        [discord.SelectOption(label=driver_name, description="ADD DESCRIPTION") for driver_name in f1_drivers])
+    select_race = discord.ui.Select(placeholder="Válassz futamot!",options=
+        [discord.SelectOption(label=race_name, description="ADD DESCRIPTION") for race_name in f1_races])
+    view = discord.ui.View()
+    view.add_item(select_driver)
+    view.add_item(select_race)
+
+    async def driver_callback(interaction):
+        await interaction.response.send_message(f"Te a {select_driver.values[0]}-t választottad.")
+        logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'choice', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"guessed driver: {select_driver.values[0]}")
+    async def race_callback(interaction):
+        await interaction.response.send_message(f"Te a {select_race.values[0]}-t választottad.")
+        logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'choice', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"guessed race type: {select_race.values[0]}")
+    select_driver.callback = driver_callback
+    select_race.callback = race_callback
+    await ctx.send("Válassz egyet-egyet!", view=view)
+    """
+    guesses could be stored 
+    """
 
 @bot.command()
 async def add(ctx, left: int, right: int):
@@ -88,7 +108,7 @@ async def xbox(ctx):
 
 @bot.command()
 async def guess(ctx,event,guess):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'input', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
@@ -107,7 +127,7 @@ async def note(ctx,*notes): # input should be wrapped with " " to store as singl
 
 @bot.command()
 async def showlast(ctx):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
@@ -119,7 +139,7 @@ async def showlast(ctx):
 
 @bot.command()
 async def next(ctx):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
@@ -130,7 +150,7 @@ async def next(ctx):
 
 @bot.command()
 async def dako(ctx, length):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
@@ -144,7 +164,7 @@ async def dako(ctx, length):
 
 @bot.command()
 async def whoami(ctx):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name)
@@ -160,7 +180,7 @@ async def button(ctx):
 
 @bot.command()
 async def what(ctx):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name)
@@ -175,7 +195,7 @@ async def joined(ctx, member: discord.Member):
 
 @bot.command()
 async def lajos(ctx):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                         'output', 
                                         inspect.currentframe().f_code.co_name,
                                         ctx.author.name)
@@ -191,13 +211,20 @@ async def lajos(ctx):
 -Ilyen... hát kár volt bazdmeg
 -Hát ja
 -Na jólvan szia
--Szia"""
+-Szia
+
+Try '!lajos_mp3'
+"""
     for line in script.split('\n'):
         await ctx.send(line)
 
 @bot.command()
+async def lajos_mp3(ctx):
+    await ctx.send(file=discord.File('../src/images/lajos_trim.mp3'))
+
+@bot.command()
 async def szeretsz_elni(ctx):
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name)
@@ -247,14 +274,14 @@ def main():
             print(f"Error: file '{filename}' not found.")
             sys.exit(1)
 
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'start-up', 
                                           inspect.currentframe().f_code.co_name,
                                           "server")
 
     bot.run(TOKEN)
 
-    local_log = logging_machine.createLog(str(datetime.datetime.now()), 
+    logging_machine.createLog(str(datetime.datetime.now()), 
                                           'shutdown', 
                                           inspect.currentframe().f_code.co_name,
                                           "server")
