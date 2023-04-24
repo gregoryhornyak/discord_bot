@@ -2,6 +2,5 @@ token
 .todo
 .info
 venv/
-system_log.txt
-db1.json
+databases/
 uploads/
