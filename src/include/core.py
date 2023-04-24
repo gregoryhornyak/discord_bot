@@ -116,7 +116,8 @@ async def showlast(ctx):
     present = f1_schedule.get_present(as_str=True)
     user = ctx.author.name
     date,latest = db_manager.last_entry('guesses.json',user,present)
-    await ctx.send(f'Your last guess was:\n{date}:\n{latest}')
+    await ctx.send(f"Your last guess was \n{latest['guess']} - {latest['event']} \nguessed on {date[:-10]}")
+    
 
 @bot.command()
 async def next(ctx):
