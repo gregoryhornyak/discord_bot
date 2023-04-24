@@ -4,7 +4,9 @@
 
 Automated bot for a Discord server
 
-![screenshot from Discord](docs/images/screenshot01.jpg)
+![screenshot from Discord](docs/images/screenShot_guess2.jpg)
+
+![screenshot from Discord](docs/images/screenShot_showlast.jpg)
 
 ## Key Features
 
@@ -43,7 +45,7 @@ e.g. `!guess Top1 Verstappen` produces a guess of Verstappen being in the Top1.
 
 OR IF you want to vote for your favourite party:
 
-`!valasztas`
+`!guess2`
 
 > this is a UI test
 
