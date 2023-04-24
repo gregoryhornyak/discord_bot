@@ -28,12 +28,16 @@ def get_future_sessions():
     return future_dates
 
 def get_session_drivers():
+    """
+    returns driver names and their team names
+    """
     fastf1.Cache.enable_cache(CACHE_DIR)
     current_year = int(str(datetime.datetime.today().year))
     sess = fastf1.get_session(current_year,3,'R')
     sess_loaded = sess.load()
     driver_names = [sess.get_driver(str(id))['BroadcastName'].split(" ",1)[1] for id in sess.drivers]
-    return driver_names
+    driver_team = [sess.get_driver(str(id))['TeamName'] for id in sess.drivers]
+    return driver_names, driver_team
     
 def get_sessions_with_ids():
     session_dates = get_session_dates() # get session dates
@@ -43,3 +47,9 @@ def get_sessions_with_ids():
 
 if __name__ == "__main__":
     print("\nLOCAL TEST:\n\n")
+    fastf1.Cache.enable_cache(CACHE_DIR)
+    current_year = int(str(datetime.datetime.today().year))
+    sess = fastf1.get_session(current_year,3,'R')
+    sess_loaded = sess.load()
+    driver_name = sess.get_driver(str(1))
+    print(driver_name['TeamName'])
