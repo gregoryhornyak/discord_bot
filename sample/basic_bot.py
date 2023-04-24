@@ -24,6 +24,8 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', description=description, intents=intents)
 
+# event based functions
+
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
@@ -37,14 +39,23 @@ async def on_message_edit():
 async def on_disconnect():
     print("Disconnected")
 
+# command based functions
+
+## essential
+
 @bot.command()
 async def goodbye(ctx):
     await ctx.send("BOT SHUTDOWN")
     await bot.close()
 
 @bot.command()
+async def menu(ctx):
+    pass
+
+@bot.command()
 async def valasztas(ctx):
-    f1_drivers = ["Hamilton", "Verstappen","Perez","Alonso","Sainz","Stroll","Russel"]
+    #f1_drivers = ["Hamilton", "Verstappen","Perez","Alonso","Sainz","Stroll","Russel"]
+    f1_drivers = f1_schedule.get_session_drivers()
     f1_races = ["FP1","FP2","FP3","Q","R"]
 
     select_driver = discord.ui.Select(placeholder="Válassz sofőrt!",options=
@@ -77,6 +88,46 @@ async def valasztas(ctx):
     """
 
 @bot.command()
+async def guess(ctx,event,guess):
+    logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'input', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"event: {event}\n\tguess: {guess}")
+    # prepare arguments
+    present = f1_schedule.get_present(as_str=True)
+    user = ctx.author.name
+    # store input
+    db_manager.append_db('db1.json',present,user,event,guess)
+    # reply
+    await ctx.send(f'Your guess {guess} for {event} has been saved.')
+
+@bot.command()
+async def showlast(ctx):
+    logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"last entry request")
+    present = f1_schedule.get_present(as_str=True)
+    user = ctx.author.name
+    date,latest = db_manager.last_entry('db1.json',user,present)
+    await ctx.send(f'Your last guess was:\n{date}:\n{latest}')
+
+@bot.command()
+async def next(ctx):
+    logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'output', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"next event request")
+    await ctx.send('Lemme find it...')
+    session_dates = f1_schedule.get_future_sessions()
+    await ctx.send(f'The next event is on {session_dates[0]}')
+
+## For fun
+
+@bot.command()
 async def add(ctx, left: int, right: int):
     """Adds two numbers together."""
     await ctx.send(left + right)
@@ -106,47 +157,11 @@ async def xbox(ctx):
     await ctx.send(file=discord.File('../src/images/my_image.jpeg'))
     print("image sent")
 
-@bot.command()
-async def guess(ctx,event,guess):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'input', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"event: {event}\n\tguess: {guess}")
-    # prepare arguments
-    present = f1_schedule.get_present(as_str=True)
-    user = ctx.author.name
-    # store input
-    db_manager.append_db('db1.json',present,user,event,guess)
-    # reply
-    await ctx.send(f'Your guess {guess} for {event} has been saved.')
 
 @bot.command()
 async def note(ctx,*notes): # input should be wrapped with " " to store as single word/sentence
     print(f"notes: {notes}")
 
-@bot.command()
-async def showlast(ctx):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"last entry request")
-    present = f1_schedule.get_present(as_str=True)
-    user = ctx.author.name
-    date,latest = db_manager.last_entry('db1.json',user,present)
-    await ctx.send(f'Your last guess was:\n{date}:\n{latest}')
-
-@bot.command()
-async def next(ctx):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"next event request")
-    await ctx.send('Lemme find it...')
-    session_dates = f1_schedule.get_future_sessions()
-    await ctx.send(f'The next event is on {session_dates[0]}')
 
 @bot.command()
 async def dako(ctx, length):
@@ -254,6 +269,7 @@ async def _bot(ctx):
     """Is the bot cool?"""
     await ctx.send('Yes, the bot is cool.')
 
+# Main function
 
 def main():
 
