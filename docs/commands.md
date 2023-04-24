@@ -15,3 +15,7 @@ to see the results from your guess: `evalast`
 to see your total score: `overall`
 
 to add notes: `note` | then a long text
+
+to shutdown the bot: `goodbye`
+
+
