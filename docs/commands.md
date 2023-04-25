@@ -4,7 +4,7 @@
 
 > every command should start with '!'.
 
-to make a guess: `guess`
+to make a guess: `guess` or `guess2`
 
 to see your last guess: `showlast`
 
