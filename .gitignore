@@ -2,5 +2,5 @@ token
 .todo
 .info
 venv/
-databases/
-uploads/
+resources/
+__pycache__/
