@@ -6,7 +6,7 @@ Automated bot for a Discord server
 
 ![screenshot from Discord](docs/images/screenShot_guess2.jpg)
 
-![screenshot from Discord](docs/images/screenShot_showlast.jpg)
+![screenshot from Discord](docs/images/screenShot_showlast2.png)
 
 ## Key Features
 
