@@ -43,7 +43,7 @@ IF you want to make a guess:
 
 e.g. `!guess Top1 Verstappen` produces a guess of Verstappen being in the Top1.
 
-OR IF you want to vote for your favourite party:
+OR:
 
 `!guess2`
 
