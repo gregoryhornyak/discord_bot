@@ -1,6 +1,6 @@
 import json
 
-PATH = 'resources/'
+PATH = 'resources/data/'
 
 def check_db_exists(db_name):
     """Check if a database exists with the same name"""
