@@ -9,6 +9,6 @@
 3. Setup the virtual environment: `virtualenv -p /usr/bin/python3 venv`
 4. After setup, activate it: `source venv/bin/activate` <br> Then it should show `(venv)` in the left.
 5. Now go to the main directory `discord_bot` and install the requirements: `pip install -r requirements.txt`
-6. Then navigate to the `sample` directory and run the core app with `python3 sample/basic_bot.py src/token/token` <br> where the argument is the location of the token.
+6. Then navigate to the `sample` directory and run the core app with `python3 sample/basic_bot.py resources/token/token` <br> where the argument is the location of the token.
 
 If you want to quit **venv**, type `deactivate`
