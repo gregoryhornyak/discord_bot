@@ -11,6 +11,7 @@ from include import f1_schedule
 from include import db_manager
 from include import logging_machine
 import os
+import re
 
 TOKEN_PATH = "../resources/token/"
 UPLOADS_PATH = "../resources/uploads/"
@@ -52,6 +53,16 @@ async def menu(ctx):
     pass
 
 @bot.command()
+async def admin_guess2(ctx,date,guess,event):
+    print(f"\n\n{date}\n{guess}\n{event}\n\n")
+    regex_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+" # datetime regex
+    print(f"{re.findall(regex_pattern, date) = }")
+    if re.findall(regex_pattern, date)[0] != date:
+        raise Exception
+    db_manager.append_db(GUESS_FILE,date,ctx.author.name,event,guess)
+    await ctx.send(f"Successfully saved:\n{date}\n{guess}\n{event}")
+
+@bot.command()
 async def guess2(ctx):
     await ctx.send("Fetching has begun... may take a while")
     f1_drivers, f1_teams = f1_schedule.get_session_drivers()
@@ -84,7 +95,7 @@ async def guess2(ctx):
                                           data=f"guessed race type: {select_race.values[0]}")
     async def button_callback(interaction):
         db_manager.append_db(GUESS_FILE,f1_schedule.get_present(as_str=True),ctx.author.name,select_race.values[0],select_driver.values[0])
-        print("DB-MANAGER appended guess to db")
+        print("DB-MANAGER appended guess")
         await interaction.response.send_message("You have submitted your guess!")
     select_driver.callback = driver_callback
     select_race.callback = race_callback
