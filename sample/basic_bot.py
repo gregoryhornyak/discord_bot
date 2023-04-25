@@ -1,5 +1,5 @@
 import sys
-sys.path.append('src/')
+sys.path.append('.')
 from include import core
 
 def main():
@@ -36,5 +36,6 @@ def main():
                                           "server")
 
     print(f'Bot has been terminated')
+    
 
 main()
