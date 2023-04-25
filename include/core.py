@@ -12,7 +12,10 @@ from include import db_manager
 from include import logging_machine
 import os
 
-TOKEN_PATH = "../discord_token/token"
+TOKEN_PATH = "../resources/token/"
+UPLOADS_PATH = "../resources/uploads/"
+GUESS_FILE = "guesses.json"
+
 
 intents = discord.Intents.default()
 intents.members = True
@@ -80,7 +83,7 @@ async def guess2(ctx):
                                           ctx.author.name,
                                           data=f"guessed race type: {select_race.values[0]}")
     async def button_callback(interaction):
-        db_manager.append_db('guesses.json',f1_schedule.get_present(as_str=True),ctx.author.name,select_race.values[0],select_driver.values[0])
+        db_manager.append_db(GUESS_FILE,f1_schedule.get_present(as_str=True),ctx.author.name,select_race.values[0],select_driver.values[0])
         print("DB-MANAGER appended guess to db")
         await interaction.response.send_message("You have submitted your guess!")
     select_driver.callback = driver_callback
@@ -102,7 +105,7 @@ async def guess(ctx,event,guess):
     present = f1_schedule.get_present(as_str=True)
     user = ctx.author.name
     # store input
-    db_manager.append_db('db1.json',present,user,event,guess)
+    db_manager.append_db(GUESS_FILE,present,user,event,guess)
     # reply
     await ctx.send(f'Your guess {guess} for {event} has been saved.')
 
@@ -115,7 +118,7 @@ async def showlast(ctx):
                                           data=f"last entry request")
     present = f1_schedule.get_present(as_str=True)
     user = ctx.author.name
-    date,latest = db_manager.last_entry('guesses.json',user,present)
+    date,latest = db_manager.last_entry(GUESS_FILE,user,present)
     await ctx.send(f"Your last guess was \n{latest['guess']} - {latest['event']} \nguessed on {date[:-10]}")
     
 
@@ -159,7 +162,7 @@ async def choose(ctx, *choices: str):
 @bot.command()
 async def xbox(ctx):
     print("image requested")
-    await ctx.send(file=discord.File('../src/images/my_image.jpeg'))
+    await ctx.send(file=discord.File(UPLOADS_PATH+"xbox.jpeg"))
     print("image sent")
 
 
@@ -232,15 +235,14 @@ async def lajos(ctx):
 -Hát ja
 -Na jólvan szia
 -Szia
-
-Try '!lajos_mp3'
-"""
+...
+Try '!lajos_mp3'"""
     for line in script.split('\n'):
         await ctx.send(line)
 
 @bot.command()
 async def lajos_mp3(ctx):
-    await ctx.send(file=discord.File('../src/images/lajos_trim.mp3'))
+    await ctx.send(file=discord.File(UPLOADS_PATH+"lajos_trim.mp3"))
 
 @bot.command()
 async def szeretsz_elni(ctx):

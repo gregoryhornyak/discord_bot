@@ -1,8 +1,10 @@
 import os
 
+PATH = 'resources/'
+
 def get_file_path():
 
-    log_directory_path = '../src/databases'
+    log_directory_path = PATH
 
     if not os.path.exists(log_directory_path):
         os.makedirs(log_directory_path)
@@ -12,7 +14,7 @@ def get_file_path():
     return file_path
 
 
-def createLog(timestamp, direction, function_name, user, **data) -> str:
+def createLog(timestamp, direction, function_name, user, **data) -> None:
     """
     timestamp: when did it start
     direction: input or output
@@ -31,6 +33,7 @@ def createLog(timestamp, direction, function_name, user, **data) -> str:
     except: pass
     message += "\n>-----------------------------------<"
     writeLog(message)
+    return 0
 
 def writeLog(message) -> None:
     with open(get_file_path(),"a") as logs: # issue with file generation upon first time (when it doesnt exist)

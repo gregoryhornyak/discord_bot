@@ -1,7 +1,8 @@
 import fastf1
 import datetime
 
-CACHE_DIR = '../src/databases'
+PATH = 'resources/'
+CACHE_DIR = 'resources/f1_cache/'
 
 def get_present(as_str=False):
     if as_str:
@@ -10,15 +11,20 @@ def get_present(as_str=False):
 
 def match_dates(target_date):
     today = get_present()
-    #print(f'{today = } | {d = }')
     if today > target_date:
         return False
     return True
 
-def get_session_dates():
+def get_session_dates(session_type=5): # doesnt matter if string or not
+    # for 2023:
+    # 1: FP1
+    # 2: Q
+    # 3: FP2
+    # 4: SPRING
+    # 5: Race
     fastf1.Cache.enable_cache(CACHE_DIR)
     current_year = int(str(datetime.datetime.today().year))
-    session_dates = [fastf1.get_session(current_year, r, 'R').date for r in range(1,24)]
+    session_dates = [fastf1.get_session(current_year, r, session_type).date for r in range(1,24)]
     return session_dates
 
 def get_future_sessions():
@@ -40,6 +46,7 @@ def get_session_drivers():
     return driver_names, driver_team
     
 def get_sessions_with_ids():
+    """returns every session in a year"""
     session_dates = get_session_dates() # get session dates
     event_id_list = [id+1 for id in range(len(session_dates))] # serial numbers from 1 to 23
     sessions = list(zip(event_id_list,session_dates)) # merge them into a list of tuples
@@ -47,9 +54,8 @@ def get_sessions_with_ids():
 
 if __name__ == "__main__":
     print("\nLOCAL TEST:\n\n")
-    fastf1.Cache.enable_cache(CACHE_DIR)
-    current_year = int(str(datetime.datetime.today().year))
-    sess = fastf1.get_session(current_year,3,'R')
-    sess_loaded = sess.load()
-    driver_name = sess.get_driver(str(1))
-    print(driver_name['TeamName'])
+    #dates = [get_session_dates(session_type=(ses_tpe)) for ses_tpe in range(1,6)]
+    dates = get_session_dates()
+    for sn,d in enumerate(dates):
+        print(sn+1)
+        print(*d)
