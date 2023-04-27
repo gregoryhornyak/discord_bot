@@ -11,7 +11,8 @@ def get_present(as_str=False):
 
 def match_dates(target_date):
     today = get_present()
-    if today > target_date:
+    #print(f"{target_date = }")
+    if today > target_date[1]:
         return False
     return True
 
@@ -29,9 +30,20 @@ def get_session_dates(session_type=5): # doesnt matter if string or not
 
 def get_future_sessions():
     """return every future session date"""
-    future_dates = filter(match_dates,get_session_dates())
-    future_dates = [f for f in future_dates]
+    future_dates = filter(match_dates,get_sessions_with_ids())
+    future_dates = list(future_dates)
     return future_dates
+
+def get_last_session_results():
+    fastf1.Cache.enable_cache(CACHE_DIR)
+    current_year = int(str(datetime.datetime.today().year))
+    session_dates = get_future_sessions()
+    sess = fastf1.get_session(current_year,session_dates[0][0]-1,'R')
+    sess_loaded = sess.load()
+    results = sess.results
+    date = sess.date
+    #print(f"On {date}:\n{results[['BroadcastName', 'Points']].iloc[:3]} points")
+    return results[['BroadcastName', 'Points']].iloc[:3]
 
 def get_session_drivers():
     """
@@ -54,8 +66,4 @@ def get_sessions_with_ids():
 
 if __name__ == "__main__":
     print("\nLOCAL TEST:\n\n")
-    #dates = [get_session_dates(session_type=(ses_tpe)) for ses_tpe in range(1,6)]
-    dates = get_session_dates()
-    for sn,d in enumerate(dates):
-        print(sn+1)
-        print(*d)
+    
