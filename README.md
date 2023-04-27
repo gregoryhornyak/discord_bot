@@ -8,6 +8,8 @@ Automated bot for a Discord server
 
 ![screenshot from Discord](docs/images/screenShot_showlast2.png)
 
+---
+
 ## Key Features
 
 - Running continuously
@@ -48,6 +50,12 @@ OR:
 `!guess2`
 
 > this is a UI test
+
+### Workflow
+
+1. User makes a guess from the possible options.
+2. The system saves the guess until the corresponding event occurs.
+3. After the event, the system fetches the results and runs a comparison between the guesses and the results.
 
 ---
 
