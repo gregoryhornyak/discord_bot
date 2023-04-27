@@ -1,22 +1,27 @@
 # The layout of the repository
 
 - docs:
+  - images:
   - **commands**
   - **layout**
   - **user stories**
+  - **rules**
 - sample:
   - **basic disc bot**
-- src:
-  - databases:
-    - **guess-db**
+- resources:
+  - data:
+    - lookup_tables
+    - **guesses.json**
     - **logs**
   - disc-token:
     - **token**
-  - images:
-  - include:
-    - **db_manager**
-    - **f1_schedule**
-    - **logging**
+  - uploads:
+  - f1_cache
+- include:
+  - **db_manager**
+  - **f1_schedule**
+  - **logging**
+  - **core**
 - tests
 - **LICENCE**
 - **README**
