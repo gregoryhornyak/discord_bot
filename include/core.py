@@ -14,7 +14,7 @@ import os
 import re
 
 TOKEN_PATH = "../resources/token/"
-UPLOADS_PATH = "../resources/uploads/"
+UPLOADS_PATH = "resources/uploads/"
 GUESS_FILE = "guesses.json"
 
 
@@ -142,7 +142,14 @@ async def next(ctx):
                                           data=f"next event request")
     await ctx.send('Lemme find it...')
     session_dates = f1_schedule.get_future_sessions()
-    await ctx.send(f'The next event is on {session_dates[0]}')
+    # display the serial number and the date
+    await ctx.send(f'The next {session_dates[0][0]}. event is on {session_dates[0][1]}')
+
+@bot.command()
+async def last_results(ctx):
+    results = f1_schedule.get_last_session_results()
+    print(results.to_string(index=False))
+    await ctx.send(results.to_string(index=False))
 
 ## For fun
 
