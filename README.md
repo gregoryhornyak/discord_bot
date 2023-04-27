@@ -51,6 +51,8 @@ OR:
 
 > this is a UI test
 
+---
+
 ### Workflow
 
 1. User makes a guess from the possible options.
