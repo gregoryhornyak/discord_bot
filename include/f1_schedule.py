@@ -16,12 +16,12 @@ def match_dates(target_date):
         return False
     return True
 
-def get_session_dates(session_type=5): # doesnt matter if string or not
+def get_session_dates(session_type=1): # doesnt matter if string or not
     # for 2023:
     # 1: FP1
     # 2: Q
     # 3: FP2
-    # 4: SPRING
+    # 4: SPRINT
     # 5: Race
     fastf1.Cache.enable_cache(CACHE_DIR)
     current_year = int(str(datetime.datetime.today().year))
@@ -45,6 +45,15 @@ def get_last_session_results():
     #print(f"On {date}:\n{results[['BroadcastName', 'Points']].iloc[:3]} points")
     return results[['BroadcastName', 'Points']].iloc[:3]
 
+def get_custom_session_results(year,event_id,sess_type):
+    fastf1.Cache.enable_cache(CACHE_DIR)
+    sess = fastf1.get_session(year,event_id,sess_type)
+    sess_loaded = sess.load() # usually fails to load Free Practice Data
+    results = sess.results 
+    print(f"{year = }\n{event_id = }\n{results.iloc[:5]} points")
+    return results
+    
+
 def get_session_drivers():
     """
     returns driver names and their team names
@@ -66,4 +75,6 @@ def get_sessions_with_ids():
 
 if __name__ == "__main__":
     print("\nLOCAL TEST:\n\n")
-    
+    res = get_custom_session_results(2022,4,3)
+    with open("results.txt","w") as f:
+        f.write(res.to_string())
