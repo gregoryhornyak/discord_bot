@@ -7,27 +7,25 @@ This is the layout (and the possible categories) for the database entries. When 
 - Author
 - Event:
     - FreePractice1:
-        - FirstPlace
+        - FirstPlace: *FP1*
     - FreePractice2:
-        - FirstPlace
-    - FreePractice3:
-        - FirstPlace
+        - FirstPlace: *FP2*
+    - FreePractice3: 
+        - FirstPlace: *FP3*
 
     - Qualification:
-        - FirstPlace
-        - SecondPlace
-        - ThirdPlace
-        - BestOfTheRest
-
-    - + Sprint Race
+        - FirstPlace: *Q1st*
+        - SecondPlace: *Q2nd*
+        - ThirdPlace: *Q3rd*
+        - BestOfTheRest: *Q-BOTR*
 
     - Race:
-        - FirstPlace
-        - SecondPlace
-        - ThirdPlace
-        - BestOfTheRest
-        - DriverOfTheDay
-        - FastestLap
-        - NumberofDNF
+        - FirstPlace: *R1st*
+        - SecondPlace: *R2nd*
+        - ThirdPlace: *R3rd*
+        - BestOfTheRest: *R-BOTR*
+        - DriverOfTheDay: *R-DOTD*
+        - FastestLap: *R-F*
+        - NumberofDNF: *R-DNF*
 - Guess:
   - String: name
