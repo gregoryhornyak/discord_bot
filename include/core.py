@@ -63,16 +63,14 @@ async def admin_guess2(ctx,date,guess,event):
     await ctx.send(f"Successfully saved:\n{date}\n{guess}\n{event}")
 
 @bot.command()
-async def guess2(ctx):
-    await ctx.send("Fetching has begun... may take a while")
+async def admin_update(ctx):
     f1_drivers, f1_teams = f1_schedule.get_session_drivers()
     f1_drivers_info = list(zip(f1_drivers,f1_teams))
-    f1_races = ["FP1","FP2","FP3","Q-1st","Q-2nd","Q-3rd","Q-BEST","Sprint","R-1st","R-2nd","R-3rd","R-BEST","R-DOD","R-Fast","R-DNF"]
-
-    select_driver = discord.ui.Select(placeholder="Choose a driver",options=
+    f1_races = ["FP1","FP2","FP3","Q1st","Q2nd","Q3rd","QBOTR","R1st","R2nd","R3rd","RBOTR","RDOTD","RF","RDNF"]
+    select_driver = discord.ui.Select(placeholder="Choose a driver who won",options=
         [discord.SelectOption(label=driver[0], description=driver[1]) for driver in f1_drivers_info])
     select_race = discord.ui.Select(placeholder="Choose a race!",options=
-        [discord.SelectOption(label=race_name, description="ADD DESCRIPTION") for race_name in f1_races])
+        [discord.SelectOption(label=race_name) for race_name in f1_races])
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
     view = discord.ui.View()
     view.add_item(select_driver)
@@ -86,6 +84,7 @@ async def guess2(ctx):
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
                                           data=f"guessed driver: {select_driver.values[0]}")
+        #return select_driver.values[0]
     async def race_callback(interaction):
         await interaction.response.send_message(f"You have chosen {select_race.values[0]}.")
         logging_machine.createLog(str(datetime.datetime.now()), 
@@ -93,10 +92,55 @@ async def guess2(ctx):
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
                                           data=f"guessed race type: {select_race.values[0]}")
+        
     async def button_callback(interaction):
         db_manager.append_db(GUESS_FILE,f1_schedule.get_present(as_str=True),ctx.author.name,select_race.values[0],select_driver.values[0])
         print("DB-MANAGER appended guess")
-        await interaction.response.send_message("You have submitted your guess!")
+        await interaction.response.send_message("You have submitted your guess!")# print everything at once
+
+    select_driver.callback = driver_callback
+    select_race.callback = race_callback
+    press_button.callback = button_callback
+
+    await ctx.send("Choose driver who won and the race type they won in", view=view)
+
+@bot.command()
+async def guess2(ctx):
+    await ctx.send("Fetching has begun... may take a while")
+    f1_drivers, f1_teams = f1_schedule.get_session_drivers()
+    f1_drivers_info = list(zip(f1_drivers,f1_teams))
+    f1_races = ["FP1","FP2","FP3","Q1st","Q2nd","Q3rd","QBOTR","R1st","R2nd","R3rd","RBOTR","RDOTD","RF","RDNF"]
+
+    select_driver = discord.ui.Select(placeholder="Choose a driver",options=
+        [discord.SelectOption(label=driver[0], description=driver[1]) for driver in f1_drivers_info])
+    select_race = discord.ui.Select(placeholder="Choose a race!",options=
+        [discord.SelectOption(label=race_name) for race_name in f1_races])
+    press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
+    view = discord.ui.View()
+    view.add_item(select_driver)
+    view.add_item(select_race)
+    view.add_item(press_button)
+
+    async def driver_callback(interaction):
+        await interaction.response.send_message(f"You have chosen {select_driver.values[0]}.")
+        logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'choice', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"guessed driver: {select_driver.values[0]}")
+        #return select_driver.values[0]
+    async def race_callback(interaction):
+        await interaction.response.send_message(f"You have chosen {select_race.values[0]}.")
+        logging_machine.createLog(str(datetime.datetime.now()), 
+                                          'choice', 
+                                          inspect.currentframe().f_code.co_name,
+                                          ctx.author.name,
+                                          data=f"guessed race type: {select_race.values[0]}")
+        #return select_race.values[0]
+    async def button_callback(interaction):
+        db_manager.append_db(GUESS_FILE,f1_schedule.get_present(as_str=True),ctx.author.name,select_race.values[0],select_driver.values[0])
+        print("DB-MANAGER appended guess")
+        await interaction.response.send_message("You have submitted your guess!")# print everything at once
     select_driver.callback = driver_callback
     select_race.callback = race_callback
     press_button.callback = button_callback
