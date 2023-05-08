@@ -33,6 +33,7 @@ def read_db(db_name):
         db = json.load(f)
     return db
 
+# store event id
 def append_db(db_name,present,user,event,guess):
     """appends the specified database with new content"""
     #print(f"appending started to {db_name} with {event} and {guess}")
