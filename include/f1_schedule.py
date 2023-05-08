@@ -76,6 +76,6 @@ def get_sessions_with_ids():
 if __name__ == "__main__":
     print("\nLOCAL TEST:\n\n")
     res = get_custom_session_results(2023,5,4)
-    with open("results.txt","w") as f:
+    with open("resources/f1_cache/results.txt","w") as f:
         f.write(res.to_string())
     #print(get_sessions_with_ids())
