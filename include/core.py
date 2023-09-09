@@ -16,20 +16,18 @@ import re
 TOKEN_PATH = "../resources/token/"
 UPLOADS_PATH = "resources/uploads/"
 GUESS_FILE = "guesses.json"
+RESULTS_FILE = "results.json"
 
+F1_RACES = ["FP1","FP2","FP3","Q1st","Q2nd","Q3rd","Q-BOTR","R1st","R2nd","R3rd","R-BOTR","R-DOTD","R-F","R-DNF"]
 
-intents = discord.Intents.default()
-intents.members = True
-intents.message_content = True
-
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
 
 # event based functions
 
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
-    print('------')
+    print('------\n')
 
 @bot.event
 async def on_message_edit():
@@ -44,16 +42,14 @@ async def on_disconnect():
 ## essential
 
 @bot.command()
-async def goodbye(ctx):
-    await ctx.send("BOT SHUTDOWN")
-    await bot.close()
-
-@bot.command()
-async def menu(ctx):
-    pass
-
-@bot.command()
-async def admin_guess2(ctx,date,guess,event):
+async def admin_guess(ctx,password,date,guess,event):
+    """allows the admin to make an artificial guess
+    pw - date - guess - event
+    date e.g.: 2023-05-08 15:11:26.272478
+    """
+    if password!="segg":
+        await ctx.send("Wrong pass")
+        return 0
     print(f"\n\n{date}\n{guess}\n{event}\n\n")
     regex_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+" # datetime regex
     print(f"{re.findall(regex_pattern, date) = }")
@@ -64,13 +60,13 @@ async def admin_guess2(ctx,date,guess,event):
 
 @bot.command()
 async def admin_update(ctx):
-    f1_drivers, f1_teams = f1_schedule.get_session_drivers()
-    f1_drivers_info = list(zip(f1_drivers,f1_teams))
-    f1_races = ["FP1","FP2","FP3","Q1st","Q2nd","Q3rd","QBOTR","R1st","R2nd","R3rd","RBOTR","RDOTD","RF","RDNF"]
-    select_driver = discord.ui.Select(placeholder="Choose a driver who won",options=
+    """allows the admin to update the database"""
+    await ctx.send("Fetching has begun... may take a while")
+    f1_drivers_info = f1_schedule.get_session_drivers()
+    select_race = discord.ui.Select(placeholder="Choose a race type:",options=
+        [discord.SelectOption(label=race_name) for race_name in F1_RACES])
+    select_driver = discord.ui.Select(placeholder="Choose a driver who won on this race:",options=
         [discord.SelectOption(label=driver[0], description=driver[1]) for driver in f1_drivers_info])
-    select_race = discord.ui.Select(placeholder="Choose a race!",options=
-        [discord.SelectOption(label=race_name) for race_name in f1_races])
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
     view = discord.ui.View()
     view.add_item(select_driver)
@@ -78,25 +74,25 @@ async def admin_update(ctx):
     view.add_item(press_button)
 
     async def driver_callback(interaction):
-        await interaction.response.send_message(f"You have chosen {select_driver.values[0]}.")
+        await interaction.response.send_message("a")
+
         logging_machine.createLog(str(datetime.datetime.now()), 
                                           'choice', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
-                                          data=f"guessed driver: {select_driver.values[0]}")
-        #return select_driver.values[0]
+                                          data=f"updated driver: {select_driver.values[0]}")
     async def race_callback(interaction):
-        await interaction.response.send_message(f"You have chosen {select_race.values[0]}.")
+        await interaction.response.send_message("a")
         logging_machine.createLog(str(datetime.datetime.now()), 
                                           'choice', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
-                                          data=f"guessed race type: {select_race.values[0]}")
-        
+                                          data=f"updated race type: {select_race.values[0]}")
     async def button_callback(interaction):
-        db_manager.append_db(GUESS_FILE,f1_schedule.get_present(as_str=True),ctx.author.name,select_race.values[0],select_driver.values[0])
-        print("DB-MANAGER appended guess")
-        await interaction.response.send_message("You have submitted your guess!")# print everything at once
+        session_dates = f1_schedule.get_future_sessions()
+        db_manager.store_results(RESULTS_FILE,2023,session_dates[0][0],select_race.values[0],select_driver.values[0])
+        print("DB-MANAGER has appended the result")
+        await interaction.response.send_message(f"You have updated:\nrace type: {select_race.values[0]}\nwinner driver: {select_driver.values[0]}\n")# print everything at once
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
@@ -105,73 +101,70 @@ async def admin_update(ctx):
     await ctx.send("Choose driver who won and the race type they won in", view=view)
 
 @bot.command()
-async def guess2(ctx):
+async def guess(ctx):
+    """Allows the user to make a guess"""
     await ctx.send("Fetching has begun... may take a while")
-    f1_drivers, f1_teams = f1_schedule.get_session_drivers()
-    f1_drivers_info = list(zip(f1_drivers,f1_teams))
-    f1_races = ["FP1","FP2","FP3","Q1st","Q2nd","Q3rd","QBOTR","R1st","R2nd","R3rd","RBOTR","RDOTD","RF","RDNF"]
-
-    select_driver = discord.ui.Select(placeholder="Choose a driver",options=
-        [discord.SelectOption(label=driver[0], description=driver[1]) for driver in f1_drivers_info])
-    select_race = discord.ui.Select(placeholder="Choose a race!",options=
-        [discord.SelectOption(label=race_name) for race_name in f1_races])
+    f1_drivers_info = f1_schedule.get_session_drivers()
+    f1_races = F1_RACES.copy()
+    
+    select_race = discord.ui.Select(placeholder="Choose a race!",options=[discord.SelectOption(label=race_name, description="NONE") for race_name in f1_races])
+    select_driver = discord.ui.Select(placeholder="Choose a driver",options=[discord.SelectOption(label=driver[0], description=driver[1]) for driver in f1_drivers_info])
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
-    view = discord.ui.View()
-    view.add_item(select_driver)
-    view.add_item(select_race)
-    view.add_item(press_button)
-
+    
+    theView = discord.ui.View()
+    theView.add_item(select_race)
+    theView.add_item(select_driver)
+    theView.add_item(press_button)
+    
     async def driver_callback(interaction):
-        await interaction.response.send_message(f"You have chosen {select_driver.values[0]}.")
-        logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'choice', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"guessed driver: {select_driver.values[0]}")
-        #return select_driver.values[0]
+        await interaction.response.send_message("")
+
     async def race_callback(interaction):
-        await interaction.response.send_message(f"You have chosen {select_race.values[0]}.")
-        logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'choice', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"guessed race type: {select_race.values[0]}")
-        #return select_race.values[0]
+        await interaction.response.send_message("")
+
     async def button_callback(interaction):
-        db_manager.append_db(GUESS_FILE,f1_schedule.get_present(as_str=True),ctx.author.name,select_race.values[0],select_driver.values[0])
+        db_manager.append_db(GUESS_FILE,f1_schedule.get_present(),ctx.author.name,f1_schedule.get_future_sessions()[0][0],select_race.values[0],select_driver.values[0])
         print("DB-MANAGER appended guess")
-        await interaction.response.send_message("You have submitted your guess!")# print everything at once
+        await interaction.response.send_message("You have submitted your guess!")# todo: print everything at once
+
     select_driver.callback = driver_callback
     select_race.callback = race_callback
     press_button.callback = button_callback
-    await ctx.send("Choose driver and race type", view=view)
+    await ctx.send("Choose driver and race type", view=theView)
     """
     guesses could be stored 
     """
 
 @bot.command()
-async def guess(ctx,event,guess):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'input', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"event: {event}\n\tguess: {guess}")
-    # prepare arguments
-    present = f1_schedule.get_present(as_str=True)
-    user = ctx.author.name
-    # store input
-    db_manager.append_db(GUESS_FILE,present,user,event,guess)
-    # reply
-    await ctx.send(f'Your guess {guess} for {event} has been saved.')
+async def evaluate(ctx):
+    """read the results, and compare them with the guesses"""
+    # collect every result for the current event
+    current_event_id = f1_schedule.get_future_sessions()[0][0]
+    results = db_manager.read_db(RESULTS_FILE)
+    winners = []
+
+    for id,values in results.items():
+        for race in F1_RACES:
+            if values["event_id"] == current_event_id: # event found
+                if values["race"] == race:
+                    winners.append([race,values["driver"]])
+                    
+
+
+    # collect every user and their guesses for this event sorted by date
+    # compare result and user guess, create a new db on points for each user
+    # say hint to get results
+    await ctx.send("joanyad")
 
 @bot.command()
 async def showlast(ctx):
+    """show your last guess"""
     logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
                                           ctx.author.name,
                                           data=f"last entry request")
-    present = f1_schedule.get_present(as_str=True)
+    present = f1_schedule.get_present()
     user = ctx.author.name
     date,latest = db_manager.last_entry(GUESS_FILE,user,present)
     await ctx.send(f"Your last guess was \n{latest['guess']} - {latest['event']} \nguessed on {date[:-10]}")
@@ -179,6 +172,7 @@ async def showlast(ctx):
 
 @bot.command()
 async def next(ctx):
+    """show the next event's date"""
     logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
                                           inspect.currentframe().f_code.co_name,
@@ -190,47 +184,22 @@ async def next(ctx):
     await ctx.send(f'The next {session_dates[0][0]}. event is on {session_dates[0][1]}')
 
 @bot.command()
-async def last_results(ctx):
-    results = f1_schedule.get_last_session_results()
+async def last_results(ctx,prev=0):
+    """show the results of the last session"""
+    await ctx.send("Please wait, may take a while...")
+    results, last_id, last_date = f1_schedule.get_last_session_results(back=prev)
+    #print(f'{last_date.strftime("%Y-%m-%d") = }')
+    db_manager.create_md_and_print(results.iloc[:,[1,8,13,14,15]].to_markdown(),str(last_id),str(last_date.strftime("%Y-%m-%d")))
     print(results.to_string(index=False))
-    await ctx.send(results.to_string(index=False))
+    cmd = f'pandoc {UPLOADS_PATH}../data/last_session_results.md -o {UPLOADS_PATH}last_results_board.pdf'
+    os.system(cmd)
+    # pdfcrop --margins '30 20 30 -450' last_results_board.pdf last_board_crop.pdf
+    cmd2 = f'pdftoppm {UPLOADS_PATH}last_results_board.pdf {UPLOADS_PATH}pretty_board -png -H 700'
+    os.system(cmd2)
+    await ctx.send(file=discord.File(UPLOADS_PATH+"pretty_board-1.png"))
+    #await ctx.send(results.iloc[:,[1,8,15]].to_string(index=False))
 
 ## For fun
-
-@bot.command()
-async def add(ctx, left: int, right: int):
-    """Adds two numbers together."""
-    await ctx.send(left + right)
-
-
-@bot.command()
-async def roll(ctx, dice: str):
-    """Rolls a dice in NdN format."""
-    try:
-        rolls, limit = map(int, dice.split('d'))
-    except Exception:
-        await ctx.send('Format has to be in NdN!')
-        return
-
-    result = ', '.join(str(random.randint(1, limit)) for r in range(rolls))
-    await ctx.send(result)
-
-
-@bot.command(description='For when you wanna settle the score some other way')
-async def choose(ctx, *choices: str):
-    """Chooses between multiple choices."""
-    await ctx.send(random.choice(choices))
-
-@bot.command()
-async def xbox(ctx):
-    print("image requested")
-    await ctx.send(file=discord.File(UPLOADS_PATH+"xbox.jpeg"))
-    print("image sent")
-
-
-@bot.command()
-async def note(ctx,*notes): # input should be wrapped with " " to store as single word/sentence
-    print(f"notes: {notes}")
 
 
 @bot.command()
@@ -255,28 +224,6 @@ async def whoami(ctx):
                                           ctx.author.name)
     for i in range(1):
         await ctx.send(f"You are {ctx.author.name}")
-
-@bot.command()
-async def button(ctx):
-    view = discord.ui.View()
-    button = discord.ui.Button(label="Nuke Israel")
-    view.add_item(button)
-    await ctx.send(view=view)
-
-@bot.command()
-async def what(ctx):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name)
-    await ctx.send("""To guess a score: SIGN+guess -> SCORE
-To see every guess: SIGN+board
-To only see your guesses: SIGN+myboard""")
-
-@bot.command()
-async def joined(ctx, member: discord.Member):
-    """Says when a member joined."""
-    await ctx.send(f'{member.name} joined {discord.utils.format_dt(member.joined_at)}')
 
 @bot.command()
 async def lajos(ctx):
@@ -322,21 +269,6 @@ async def szeretsz_elni(ctx):
     """
     for line in script.split('\n'):
         await ctx.send(line)
-
-@bot.group()
-async def cool(ctx):
-    """Says if a user is cool.
-
-    In reality this just checks if a subcommand is being invoked.
-    """
-    if ctx.invoked_subcommand is None:
-        await ctx.send(f'No, {ctx.subcommand_passed} is not cool')
-
-
-@cool.command(name='bot')
-async def _bot(ctx):
-    """Is the bot cool?"""
-    await ctx.send('Yes, the bot is cool.')
 
 # Main function
 
