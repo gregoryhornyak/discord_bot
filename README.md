@@ -67,7 +67,7 @@ This bot was designed on Linux, meaning the setup is optimised for Linux distros
 
 The repository uses **python venv**, which needs to be initialised beforehand, and the required packages installed inside.  
 
-A brief tutorial on setup is available [here](setup.md).
+A brief tutorial on setup is available [here](docs/setup.md).
 
 ---
 
