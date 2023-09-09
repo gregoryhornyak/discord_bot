@@ -1,8 +1,10 @@
 # How To Setup the Project
 
-> on Linux Ubuntu 22.04
+on Linux Ubuntu 22.04
 
-<u>MUST HAVE</u>: **Python-3** and **GIT**
+MUST HAVE: **Python-3** and **GIT**
+
+> otherwise `sudo apt install git; sudo apt install python3.10`
 
 1. Download the repository with `git clone https://github.com/gregoryhornyak/discord_bot.git`
 2. Install **virtualenv**: `sudo apt install virtualenv -y`
