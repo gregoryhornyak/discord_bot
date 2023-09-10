@@ -2,20 +2,22 @@
 
 ## List of commands
 
-> every command should start with '!'.
+**every command should start with '!'**
 
-to make a guess: `guess` or `guess2`
+to make a guess: `guess`
 
 to see your last guess: `showlast`
 
-to get the next event's date: `next`
+to get the next event's date: `nextdate`
 
-to see the results from your guess: `evalast`
+to see the results from your guess: `evaluate`
 
-to see your total score: `overall`
+to see the latest results: `last_results` [number to specify which event No, back from now]
 
-to add notes: `note` | then a long text
+> to see your total score: `overall`
 
-to shutdown the bot: `goodbye`
+> to add notes: `note` | then a long text
+
+> to shutdown the bot: `goodbye`
 
 
