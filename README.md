@@ -1,6 +1,6 @@
 # Formula One Discord Bot
 
-[![Version](https://badge.fury.io/gh/tterb%2FHyde.svg)](https://badge.fury.io/gh/tterb%2FHyde)
+![Version](https://img.shields.io/badge/version-0.1-green) ![Deps](https://img.shields.io/badge/dependencies-up_to_date-green) ![Python](https://img.shields.io/badge/python-3.10-yellow) ![build](https://img.shields.io/badge/build-passing-yellow)
 
 Automated bot for a Discord server
 
