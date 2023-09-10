@@ -2,11 +2,20 @@
 
 ![Version](https://img.shields.io/badge/version-0.1-green) ![Deps](https://img.shields.io/badge/dependencies-up_to_date-green) ![Python](https://img.shields.io/badge/python-3.10-yellow) ![build](https://img.shields.io/badge/build-passing-yellow)
 
-Automated bot for a Discord server
+### Automated bot for a Discord server
 
-![screenshot from Discord](docs/images/screenShot_guess2.jpg)
+*1) guess method*
+
+![screenshot from Discord](docs/images/screenShot_guess.png)
+
+*2) showlast method*
 
 ![screenshot from Discord](docs/images/screenShot_showlast2.png)
+
+*3) last_results method (returns a png)*
+
+![screenshot from Discord](docs/images/screenShot_last_results.png)
+
 
 ---
 
