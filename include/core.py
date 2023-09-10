@@ -150,11 +150,10 @@ async def evaluate(ctx):
                     winners.append([race,values["driver"]])
                     
 
-
     # collect every user and their guesses for this event sorted by date
     # compare result and user guess, create a new db on points for each user
     # say hint to get results
-    await ctx.send("joanyad")
+    await ctx.send("jelenleg a joanyad fog kiértékelni, amikor nincs mibű")
 
 @bot.command()
 async def showlast(ctx):
@@ -171,7 +170,7 @@ async def showlast(ctx):
     
 
 @bot.command()
-async def next(ctx):
+async def nextdate(ctx):
     """show the next event's date"""
     logging_machine.createLog(str(datetime.datetime.now()), 
                                           'output', 
@@ -199,8 +198,8 @@ async def last_results(ctx,prev=0):
     await ctx.send(file=discord.File(UPLOADS_PATH+"pretty_board-1.png"))
     #await ctx.send(results.iloc[:,[1,8,15]].to_string(index=False))
 
-## For fun
 
+## For fun
 
 @bot.command()
 async def dako(ctx, length):
