@@ -5,6 +5,8 @@ from include import core
 
 def main():
 
+    core.logger.info("Discord bot started")
+
     TOKEN = ""
 
     current_directory = core.os.getcwd()
@@ -23,8 +25,6 @@ def main():
         except FileNotFoundError:
             core.logger.error(f"Error: file '{filename}' not found.")
             sys.exit(1)
-
-    core.logger.info("Bot is booted up ->")
 
     core.bot.run(TOKEN)
 

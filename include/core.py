@@ -27,7 +27,16 @@ F1_RACES = ["FP1","FP2","FP3",
             "R-DOTD","R-F","R-DNF"]
 
 
-logging.basicConfig(filename=f'{LOGS_PATH}logs.log', filemode='a', level=logging.DEBUG)
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s')
+
+file_handler = logging.FileHandler(f"{LOGS_PATH}botlogs.log")
+file_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+file_handler.setFormatter(formatter)
+
+logging.getLogger().addHandler(file_handler)
 
 logger = logging.getLogger(__name__)
 
@@ -54,8 +63,9 @@ Boot start: {datetime.datetime.now()}
 @commands.has_permissions(administrator=True)
 async def shutdown(ctx):
     await ctx.send("Bot will shutdown in 1sec")
-    await bot.close()
     logger.debug("Bot Closed")
+    await bot.close()
+
 
 # every day: get the date, and check if its tomorrow or not
 # - if tomorrow: print a message for everyone
