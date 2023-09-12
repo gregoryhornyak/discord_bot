@@ -19,6 +19,7 @@ UPLOADS_PATH = "resources/uploads/"
 GUESS_FILE = "resources/guesses/"
 SCORES_FILE = "resources/scores/"
 LOGS_PATH = "resources/logs/"
+VERSION = "0.1.2"
 
 F1_RACES = ["FP1","FP2","FP3",
             "Q1st","Q2nd","Q3rd","Q-BOTR",
@@ -39,13 +40,20 @@ bot = commands.Bot(command_prefix='!',
 # event based functions
 
 @bot.event
-async def on_ready(ctx):
+async def on_ready():
     logger.info(f'Logged in as {bot.user}\n------\n')
-    await ctx.send("Hey there!")
+    channel_id = bot.get_channel(1078427611597906004)
+    boot_message = f"""
+    Formula One Discord Bot v{VERSION}
+is running in {channel_id.name} channel
+Boot start: {datetime.datetime.now()}
+"""
+    await channel_id.send(boot_message)
 
 @bot.command()#(aliases=["quit"])
 @commands.has_permissions(administrator=True)
 async def shutdown(ctx):
+    await ctx.send("Bot will shutdown in 1sec")
     await bot.close()
     logger.debug("Bot Closed")
 
