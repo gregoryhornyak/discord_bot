@@ -289,11 +289,13 @@ async def szeretsz_elni(ctx):
 @bot.command()
 async def hello(ctx):
     await ctx.send("Hello there")
+    logger.info("hello func")
 
 @bot.command()
 async def kozso(ctx):
     await ctx.send("Az éérzéések, a szerelem, az ébredések, a kaják, a vizek, a min-mindent imádok!")
-
+    logger.info("kozso func")
+    
 # Main function
 
 if __name__ == "__main__":
