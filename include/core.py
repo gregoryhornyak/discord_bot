@@ -280,6 +280,10 @@ async def szeretsz_elni(ctx):
     for line in script.split('\n'):
         await ctx.send(line)
 
+@bot.command()
+async def hello(ctx):
+    await ctx.send("Hello there")
+
 # Main function
 
 if __name__ == "__main__":
