@@ -243,9 +243,8 @@ async def dako(ctx, length):
 
 @bot.command()
 async def whoami(ctx):
-
-    for i in range(1):
-        await ctx.send(f"You are {ctx.author.name}")
+    await ctx.send(f"You are {ctx.author.name}")
+    await ctx.send(f"Hey <@{ctx.author.id}>")
 
 @bot.command()
 async def lajos(ctx):
