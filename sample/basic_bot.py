@@ -24,9 +24,10 @@ def main():
             core.logger.error(f"Error: file '{filename}' not found.")
             sys.exit(1)
 
+    core.logger.info("Bot is booted up ->")
+
     core.bot.run(TOKEN)
 
     core.logger.info(f'Bot has been terminated')
-    
 
 main()
