@@ -3,10 +3,8 @@
 import discord
 from discord.ext import commands
 import random
-import asyncio
 import datetime
 import sys
-import inspect
 from include import f1_schedule
 from include import db_manager
 import os
@@ -259,7 +257,7 @@ async def whoami(ctx):
 @bot.command()
 async def lajos(ctx):
 
-    script = """-Szia Lajos.
+    script = """- Szia Lajos.
 - Szia bazdmeg! Kutyáidat sétáltatod?
 - Hát bazdmeg
 - Ilyen...ilyen szerelésbe?
@@ -306,6 +304,10 @@ async def kozso(ctx):
     await ctx.send("Az éérzéések, a szerelem, az ébredések, a kaják, a vizek, a min-mindent imádok!")
     logger.info("kozso func")
     
+@bot.command()
+async def predict(ctx):
+    await ctx.send("Nem látok éppen semmit.")
+
 # Main function
 
 if __name__ == "__main__":
