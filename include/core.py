@@ -74,8 +74,6 @@ async def upgrade(ctx,password):
     if password!=password_stored:
         await ctx.send("Wrong password")
         return 0
-    cmd01 = "exec ../auto_upgrade.sh"
-    os.system(cmd01)
     logger.info("BOT SHUTDOWN")
     await bot.close()
 
