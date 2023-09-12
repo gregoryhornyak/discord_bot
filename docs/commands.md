@@ -2,22 +2,14 @@
 
 ## List of commands
 
-**every command should start with '!'**
+**every command should start with '/'**
 
-to make a guess: `guess`
+`guess`: to make a guess (menu)
 
-to see your last guess: `showlast`
+`show_guess`: to see your guesses for the current event (png)
 
-to get the next event's date: `nextdate`
+`next_date`: to get the next event's date
 
-to see the results from your guess: `evaluate`
-
-to see the latest results: `last_results` [number to specify which event No, back from now]
-
-> to see your total score: `overall`
-
-> to add notes: `note` | then a long text
-
-> to shutdown the bot: `goodbye`
+`results`: to see the final score (png)
 
 

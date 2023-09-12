@@ -21,13 +21,17 @@
 
 ## Key Features
 
-- Running continuously
-- User can store guesses
-- User can retrieve their guesses
-- Updating database, based on official results
-- The score for each user can be retrieved
-- Bot can work in DM as well
-- Bot can work parallelly, having multiple clients
+- Running continuously (on AWS),
+- User can make guesses on:
+  - event,
+  - driver
+- User can retrieve their guesses in form of a picture,
+- Access to official results,
+- Evaluate user guesses based on results,
+- Inform clients on upcoming event date,
+- Working in DM as well,
+- Working parallelly, having multiple clients,
+- Logging each interaction.
 
 ---
 
@@ -78,21 +82,35 @@ The repository uses **python venv**, which needs to be initialised beforehand, a
 
 A brief tutorial on setup is available [here](docs/setup.md).
 
+## Mayor Update
+
+**Formula One Discord Bot** is moving away from FastF1 Python package:
+
+- the module isn't working properly,
+- custom json requests are easier to make using Ergast directly
+
+In the future, the Formula One Discord Bot is going to use Ergast as main information source for Race, Qualification, Finishing Status and Race schedules
+
 ---
 
 ## Components
 
-The core app, reading the inputs, and responding to the user.
+The product: a Discord chatbot, listening and writing on a Discord feed / channel.
 
-The database manager, handling the storing and retrieving actions when dealing with the database(s).
+The core app, hosting the necessary files for the chatbot. Also making connection between the database and the Discord channel.
+In addition, responsible for making the json requests from Ergast.
 
-The F1-API - a python package - fetching the F1 race data.
+The database manager, handling the storing and retrieving actions, when dealing with the database(s).
+
+A logging machine.
+
+~~The F1-API - a python package - fetching the F1 race data.~~
 
 ---
 
 ## Contributors
 
-J. Gergely Hornyak
+J. Gergely Hornyak as **developer**
 
-Gabor Korecz **as revisioning**
+Gabor Korecz as **technical support** and **testing**
 

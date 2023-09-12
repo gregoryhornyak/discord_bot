@@ -13,7 +13,7 @@ This is the layout (and the possible categories) for the database entries. When 
     - FreePractice3: 
         - FirstPlace: *FP3*
 
-    - Qualification:
+    - Qualification (Q3):
         - FirstPlace: *Q1st*
         - SecondPlace: *Q2nd*
         - ThirdPlace: *Q3rd*

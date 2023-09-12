@@ -2,6 +2,7 @@
 
 - docs:
   - images:
+    - **figures.png**
   - **commands**
   - **layout**
   - **user stories**
@@ -9,14 +10,15 @@
 - sample:
   - **basic disc bot**
 - resources:
-  - data:
-    - lookup_tables
-    - **guesses.json**
+  - logs:
     - **logs**
+  - lookup_tables:
+    - **users scores**
+  - **guesses.json**  
   - disc-token:
     - **token**
   - uploads:
-  - f1_cache
+    - **png files**
 - include:
   - **db_manager**
   - **f1_schedule**
