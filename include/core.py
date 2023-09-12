@@ -9,37 +9,72 @@ import sys
 import inspect
 from include import f1_schedule
 from include import db_manager
-from include import logging_machine
 import os
 import re
+import logging
 
-TOKEN_PATH = "../resources/token/"
+TOKEN_PATH = "resources/token/"
+PASSW_PATH = "resources/passw"
 UPLOADS_PATH = "resources/uploads/"
-GUESS_FILE = "guesses.json"
-RESULTS_FILE = "results.json"
+GUESS_FILE = "resources/guesses/"
+SCORES_FILE = "resources/scores/"
+LOGS_PATH = "resources/logs/"
 
-F1_RACES = ["FP1","FP2","FP3","Q1st","Q2nd","Q3rd","Q-BOTR","R1st","R2nd","R3rd","R-BOTR","R-DOTD","R-F","R-DNF"]
+F1_RACES = ["FP1","FP2","FP3",
+            "Q1st","Q2nd","Q3rd","Q-BOTR",
+            "R1st","R2nd","R3rd","R-BOTR",
+            "R-DOTD","R-F","R-DNF"]
 
-bot = commands.Bot(command_prefix='!', intents=discord.Intents.all())
+
+logging.basicConfig(filename=f'{LOGS_PATH}logs.log', filemode='a', level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
+
+current_directory = os.getcwd()
+logger.info(f"{current_directory = }")
+
+bot = commands.Bot(command_prefix='!',
+                   intents=discord.Intents.all())
 
 # event based functions
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user}')
-    print('------\n')
+    logger.info(f'Logged in as {bot.user}\n------\n')
+
+@bot.command()#(aliases=["quit"])
+@commands.has_permissions(administrator=True)
+async def shutdown(ctx):
+    await bot.close()
+    logger.debug("Bot Closed")
+
+# every day: get the date, and check if its tomorrow or not
+# - if tomorrow: print a message for everyone
+# 
+
+brilliant = ['brilliant', 'Brilliant', 'brilliant!', 'Brilliant!']
 
 @bot.event
-async def on_message_edit():
-    print("A message has been changed\n------")
+async def on_message(message):
+    if message.author == bot.user:
+        return  
+    msg = message.content.lower()
 
-@bot.event
-async def on_disconnect():
-    print("Disconnected")
+    if any(word in msg for word in brilliant):
+        await message.channel.send("Brilliant!")
+        logger.info(f'sent message Brilliant!')
+    await bot.process_commands(message)
 
-# command based functions
-
-## essential
+@bot.command()
+async def reboot(ctx,password):
+    """reboot the whole bot, and updates it from Github"""
+    password_stored = ""
+    f = open(f"{PASSW_PATH}password",'r')
+    f.read(password_stored)
+    f.close()
+    if password!=password_stored:
+        await ctx.send("Wrong password")
+        return 0
 
 @bot.command()
 async def admin_guess(ctx,password,date,guess,event):
@@ -76,18 +111,9 @@ async def admin_update(ctx):
     async def driver_callback(interaction):
         await interaction.response.send_message("a")
 
-        logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'choice', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"updated driver: {select_driver.values[0]}")
     async def race_callback(interaction):
         await interaction.response.send_message("a")
-        logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'choice', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"updated race type: {select_race.values[0]}")
+
     async def button_callback(interaction):
         session_dates = f1_schedule.get_future_sessions()
         db_manager.store_results(RESULTS_FILE,2023,session_dates[0][0],select_race.values[0],select_driver.values[0])
@@ -140,7 +166,7 @@ async def evaluate(ctx):
     """read the results, and compare them with the guesses"""
     # collect every result for the current event
     current_event_id = f1_schedule.get_future_sessions()[0][0]
-    results = db_manager.read_db(RESULTS_FILE)
+    results = db_manager.read_db(SCORES_FILE)
     winners = []
 
     for id,values in results.items():
@@ -158,29 +184,20 @@ async def evaluate(ctx):
 @bot.command()
 async def showlast(ctx):
     """show your last guess"""
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"last entry request")
+
     present = f1_schedule.get_present()
     user = ctx.author.name
     date,latest = db_manager.last_entry(GUESS_FILE,user,present)
     await ctx.send(f"Your last guess was \n{latest['guess']} - {latest['event']} \nguessed on {date[:-10]}")
     
-
 @bot.command()
 async def nextdate(ctx):
     """show the next event's date"""
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"next event request")
     await ctx.send('Lemme find it...')
     session_dates = f1_schedule.get_future_sessions()
     # display the serial number and the date
     await ctx.send(f'The next {session_dates[0][0]}. event is on {session_dates[0][1]}')
+    logger.info("sent next_date")
 
 @bot.command()
 async def last_results(ctx,prev=0):
@@ -203,50 +220,43 @@ async def last_results(ctx,prev=0):
 
 @bot.command()
 async def dako(ctx, length):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name,
-                                          data=f"length: {length}")
+
     mid = "="
     mid += "="*int(length)
     if int(length) < 41:
         await ctx.send(f"itt egy meretes fasz csak neked:\n8{mid}D")
+        logger.info("sent huge dong")
     else:
         await ctx.send(f'ekkora dakoval hogy tudsz te létezni?')
+        logger.info("could not send huge dong")
 
 @bot.command()
 async def whoami(ctx):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name)
+
     for i in range(1):
         await ctx.send(f"You are {ctx.author.name}")
 
 @bot.command()
 async def lajos(ctx):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                        'output', 
-                                        inspect.currentframe().f_code.co_name,
-                                        ctx.author.name)
+
     script = """-Szia Lajos.
--Szia bazdmeg! Kutyáidat sétáltatod?
--Hát bazdmeg
--Ilyen...ilyen szerelésbe?
--Hát miér milyenbe?
--Miért nem öltözöl föl rendesen?
--Hát miér hát nem vagyok rendesen bazdmeg?
--Na jólvan.
--Most vettem fel bazdmeg délután!
--Ilyen... hát kár volt bazdmeg
--Hát ja
--Na jólvan szia
--Szia
+- Szia bazdmeg! Kutyáidat sétáltatod?
+- Hát bazdmeg
+- Ilyen...ilyen szerelésbe?
+- Hát miér milyenbe?
+- Miért nem öltözöl föl rendesen?
+- Hát miér hát nem vagyok rendesen bazdmeg?
+- Na jólvan.
+- Most vettem fel bazdmeg délután!
+- Ilyen... hát kár volt bazdmeg
+- Hát ja
+- Na jólvan szia
+- Szia
 ...
 Try '!lajos_mp3'"""
     for line in script.split('\n'):
         await ctx.send(line)
+        logger.info("lajos mondta")
 
 @bot.command()
 async def lajos_mp3(ctx):
@@ -254,10 +264,7 @@ async def lajos_mp3(ctx):
 
 @bot.command()
 async def szeretsz_elni(ctx):
-    logging_machine.createLog(str(datetime.datetime.now()), 
-                                          'output', 
-                                          inspect.currentframe().f_code.co_name,
-                                          ctx.author.name)
+
     script = """- Az lenne a kérdés hogy szeretek-e élni?
     - Élni? A gyász! ... 
     meg a ... 
