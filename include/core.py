@@ -39,8 +39,9 @@ bot = commands.Bot(command_prefix='!',
 # event based functions
 
 @bot.event
-async def on_ready():
+async def on_ready(ctx):
     logger.info(f'Logged in as {bot.user}\n------\n')
+    await ctx.send("Hey there!")
 
 @bot.command()#(aliases=["quit"])
 @commands.has_permissions(administrator=True)
