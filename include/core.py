@@ -66,15 +66,17 @@ async def on_message(message):
     await bot.process_commands(message)
 
 @bot.command()
-async def reboot(ctx,password):
-    """reboot the whole bot, and updates it from Github"""
+async def upgrade(ctx,password):
+    """reboots the whole bot, and updates it from Github"""
     password_stored = ""
-    f = open(f"{PASSW_PATH}password",'r')
-    f.read(password_stored)
-    f.close()
+    with open(f"{PASSW_PATH}",'r') as f:
+        password_stored = f.read()
     if password!=password_stored:
         await ctx.send("Wrong password")
         return 0
+    cmd01 = "exec ../auto_upgrade.sh"
+    os.system(cmd01)
+    await bot.close()
 
 @bot.command()
 async def admin_guess(ctx,password,date,guess,event):
