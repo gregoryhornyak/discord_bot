@@ -76,7 +76,9 @@ async def upgrade(ctx,password):
         return 0
     cmd01 = "exec ../auto_upgrade.sh"
     os.system(cmd01)
+    logger.info("BOT SHUTDOWN")
     await bot.close()
+
 
 @bot.command()
 async def admin_guess(ctx,password,date,guess,event):
