@@ -30,4 +30,5 @@ def main():
 
     core.logger.info(f'Bot has been terminated')
 
-main()
+if __name__ == "__main__":
+    main()
