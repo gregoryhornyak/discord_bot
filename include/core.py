@@ -10,6 +10,8 @@ from include import db_manager
 import os
 import re
 import logging
+import requests
+import json
 
 TOKEN_PATH = "resources/token/"
 PASSW_PATH = "resources/passw"
@@ -149,7 +151,9 @@ async def admin_update(ctx):
 async def guess(ctx):
     """Allows the user to make a guess"""
     await ctx.send("Fetching has begun... may take a while")
-    f1_drivers_info = f1_schedule.get_session_drivers()
+    #f1_drivers_info = f1_schedule.get_session_drivers()
+    f1_drivers_info = json.loads(requests.request(method="get",url="https://ergast.com/api/f1/2023/14/drivers.json").content.decode('utf-8'))
+    logger.info(f"{f1_drivers_info = }")
     f1_races = F1_RACES.copy()
     
     select_race = discord.ui.Select(placeholder="Choose a race!",options=[discord.SelectOption(label=race_name, description="NONE") for race_name in f1_races])
@@ -309,6 +313,10 @@ async def kozso(ctx):
 @bot.command()
 async def predict(ctx):
     await ctx.send("Nem látok éppen semmit.")
+
+@bot.command()
+async def vitya(ctx):
+    await ctx.send(file=discord.File(UPLOADS_PATH+"vitya.png"))
 
 # Main function
 
