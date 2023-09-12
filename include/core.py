@@ -255,8 +255,8 @@ async def whoami(ctx):
     await ctx.send(f"Hey <@{ctx.author.id}>")
 
 @bot.command()
-async def lajos(ctx):
-
+async def lajos(ctx, pia="palinka"):
+    logger.info("lajos már régen volt az neten bazdmeg")
     script = """- Szia Lajos.
 - Szia bazdmeg! Kutyáidat sétáltatod?
 - Hát bazdmeg
@@ -272,9 +272,11 @@ async def lajos(ctx):
 - Szia
 ...
 Try '!lajos_mp3'"""
-    for line in script.split('\n'):
-        await ctx.send(line)
-        logger.info("lajos mondta")
+    if pia == "palinka":
+        for line in script.split('\n'):
+            await ctx.send(line)
+    elif pia == "geci":
+        await ctx.send("Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi?")
 
 @bot.command()
 async def lajos_mp3(ctx):
