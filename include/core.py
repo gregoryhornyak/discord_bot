@@ -12,6 +12,7 @@ import re
 import logging
 import requests
 import json
+import pandas as pd
 
 TOKEN_PATH = "resources/token/"
 PASSW_PATH = "resources/passw"
@@ -152,8 +153,14 @@ async def guess(ctx):
     """Allows the user to make a guess"""
     await ctx.send("Fetching has begun... may take a while")
     #f1_drivers_info = f1_schedule.get_session_drivers()
-    f1_drivers_info = json.loads(requests.request(method="get",url="https://ergast.com/api/f1/2023/14/drivers.json").content.decode('utf-8'))
-    logger.info(f"{f1_drivers_info = }")
+    url = "https://ergast.com/api/f1/2023/14/drivers.json"
+    response = requests.get(url)
+
+    f1_drivers_info = json.loads(requests.get(url).content.decode('utf-8'))
+    #logger.info(f"{f1_drivers_info = }")
+    df = pd.DataFrame(f1_drivers_info)
+    logger.info(f'{df["MRData"]["DriverTable"]["Drivers"]}')
+    # break it into drivers
     f1_races = F1_RACES.copy()
     
     select_race = discord.ui.Select(placeholder="Choose a race!",options=[discord.SelectOption(label=race_name, description="NONE") for race_name in f1_races])
