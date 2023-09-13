@@ -21,12 +21,12 @@
 
 ## Key Features
 
-- Running continuously (on AWS) ✅,
+- Access to official results ✅
+- Running continuously (on AWS) ✅
 - User can make guesses on:
   - event ✅
   - driver ✅
 - User can retrieve their guesses in form of a picture ✅
-- Access to official results ✅
 - Evaluate user guesses based on results,
 - Inform clients on upcoming event date,
 - Working in DM as well,

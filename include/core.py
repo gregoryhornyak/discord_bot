@@ -70,7 +70,6 @@ async def shutdown(ctx):
 # - if tomorrow: print a message for everyone
 # 
 
-    
 @bot.command()
 async def upgrade(ctx,password):
     """reboots the whole bot, and updates it from Github"""
@@ -139,14 +138,14 @@ async def guess(ctx):
     await ctx.send("Fetching has begun... may take a while")
     #url = "https://ergast.com/api/f1/2023/14/drivers.json" # deprecated
     #url = "https://www.formula1.com/en/results.html/2023/races/1218/italy/race-result.html"
-    url = "https://www.formula1.com/en/results.html/2023/drivers.html"
-    response = requests.get(url).text
+    drivers_url = "https://www.formula1.com/en/results.html/2023/drivers.html"
+    drivers_request = requests.get(drivers_url).text
     logger.info("Successfully requested URL")
-    soup = BeautifulSoup(response, 'html.parser')
+    drivers_soup = BeautifulSoup(drivers_request, 'html.parser')
 
-    surnames = soup.find_all('span', class_="hide-for-mobile")
-    firstnames = soup.find_all('span', class_="hide-for-tablet")
-    carnames = soup.find_all('a', class_="grey semi-bold uppercase ArchiveLink")
+    surnames = drivers_soup.find_all('span', class_="hide-for-mobile")
+    firstnames = drivers_soup.find_all('span', class_="hide-for-tablet")
+    carnames = drivers_soup.find_all('a', class_="grey semi-bold uppercase ArchiveLink")
     drivers_surnames = [name.get_text() for name in surnames]
     drivers_firstnames = [name.get_text() for name in firstnames]
     cars = [name.get_text() for name in carnames]
@@ -189,14 +188,87 @@ async def guess(ctx):
 # each race has their own id
 #  <option value="1141/bahrain">Bahrain</option>
 
-
 @bot.command()
 async def evaluate(ctx):
-    """read the results, and compare them with the guesses"""
-    # collect every result for the current event
-    current_event_id = f1_schedule.get_future_sessions()[0][0]
-    results = db_manager.read_db(SCORES_FILE)
-    winners = []
+    """read the results, and compare them with the guesses
+    could only happen after the race"""
+
+    # get previous race id and name to request the race
+    all_races_url = "https://www.formula1.com/en/results.html/2023/races.html"
+    all_races_response = requests.get(all_races_url).text
+    logger.info("Successfully requested URL")
+    all_races_soup = BeautifulSoup(all_races_response, 'html.parser')
+    
+    race_names = all_races_soup.find_all('a', class_="dark bold ArchiveLink")
+    race_names_text = [name.get_text().strip() for name in race_names]
+    logger.info(f"{race_names_text = }")
+
+    race_ids = all_races_soup.find_all('a', class_='ArchiveLink')
+    race_ids_text = [name.get('href') for name in race_ids]
+    race_ids_text_splitted = [name.split('/')[5] for name in race_ids_text]
+    logger.info(f"{race_ids_text_splitted = }")
+    
+    previous_race_id = race_ids_text_splitted[-1]
+    previous_race_name = race_names_text[-1]
+
+    # find out RACE results in previous race
+    previous_race_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/race-result.html"
+    logger.info(f"{previous_race_url = }")
+    previous_race_response = requests.get(previous_race_url).text
+    driver_results_all_soup = BeautifulSoup(previous_race_response, 'html.parser')
+    driver_results_all = driver_results_all_soup.find_all('tr')
+    driver_results_all_text = [name.get_text().strip() for name in driver_results_all]
+    driver_results_all_text_split = [name.split("\n") for name in driver_results_all_text]
+    driver_results_all_filtered_list = [[item for item in original_list if item != ''] for original_list in driver_results_all_text_split]
+    
+    header_list = driver_results_all_filtered_list[0]
+    driver_results_all_filtered_list = driver_results_all_filtered_list[1:]
+    join_names = lambda arr: ' '.join(arr[2:4])
+    dr_res_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_all_filtered_list]
+    driver_results_all_df = pd.DataFrame(dr_res_all_modified_data, columns=header_list)
+    logger.info(f"{driver_results_all_df = }")
+    # headers: | Pos No Driver Car Laps Time/Retired PTS
+    driver_results_all_df_message = driver_results_all_df.loc[:2, ['Driver', 'Time/Retired', 'PTS']]
+    await ctx.send(driver_results_all_df_message.to_string(index=False, justify='left'))
+    #logger.info(f"sent df {driver_results_all_df_message.to_string(index=False, justify='left') = }")
+
+    # find out QUALIFYING results in previous race
+    previous_race_q_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/qualifying.html"
+    previous_race_q_response = requests.get(previous_race_q_url).text
+    driver_results_q_all_soup = BeautifulSoup(previous_race_q_response, 'html.parser')
+    driver_results_q_all = driver_results_q_all_soup.find_all('tr')
+    driver_results_q_all_text = [name.get_text().strip() for name in driver_results_q_all]
+    driver_results_q_all_text_split = [name.split("\n") for name in driver_results_q_all_text]
+    driver_results_q_all_filtered_list = [[item for item in original_list if item != ''] for original_list in driver_results_q_all_text_split]
+    header_list = driver_results_q_all_filtered_list[0]
+    driver_results_q_all_filtered_list = driver_results_q_all_filtered_list[1:]
+    dr_res_q_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_q_all_filtered_list]
+    driver_results_q_all_df = pd.DataFrame(dr_res_q_all_modified_data, columns=header_list)
+    logger.info(f"{driver_results_q_all_df = }")
+    
+    def get_fpX_results(num):
+    # find out FP1 results in previous race
+        previous_race_fp1_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/practice-{num}.html"
+        previous_race_fp1_response = requests.get(previous_race_fp1_url).text
+        driver_results_fp1_all_soup = BeautifulSoup(previous_race_fp1_response, 'html.parser')
+        driver_results_fp1_all = driver_results_fp1_all_soup.find_all('tr')
+        driver_results_fp1_all_text = [name.get_text().strip() for name in driver_results_fp1_all]
+        driver_results_fp1_all_text_split = [name.split("\n") for name in driver_results_fp1_all_text]
+        driver_results_fp1_all_filtered_list = [[item for item in original_list if item != ''] for original_list in driver_results_fp1_all_text_split]
+        header_list = driver_results_fp1_all_filtered_list[0]
+        driver_results_fp1_all_filtered_list = driver_results_fp1_all_filtered_list[1:]
+        dr_res_fp1_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_fp1_all_filtered_list]
+        driver_results_fp1_all_df = pd.DataFrame(dr_res_fp1_all_modified_data, columns=header_list)
+        logger.info(f"FP{num} results: {driver_results_fp1_all_df = }")
+        
+    get_fpX_results(1)
+    get_fpX_results(2)
+    get_fpX_results(3)
+
+    sprint_url = "https://www.formula1.com/en/results.html/2023/races/{race_id}/{race_name}/sprint-results.html"
+
+    return
+    #get_previous_event_results = 
 
     for id,values in results.items():
         for race in F1_RACES:
