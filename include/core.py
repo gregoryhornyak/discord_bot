@@ -2,16 +2,11 @@
 
 import discord
 from discord.ext import commands
-import random
 import datetime
-import sys
-from include import f1_schedule
-from include import db_manager
 import os
-import re
 import logging
 import requests
-import json
+from bs4 import BeautifulSoup
 import pandas as pd
 
 TOKEN_PATH = "resources/token/"
@@ -27,14 +22,17 @@ F1_RACES = ["FP1","FP2","FP3",
             "R1st","R2nd","R3rd","R-BOTR",
             "R-DOTD","R-F","R-DNF"]
 
+# USE JSON AND DICTIONARIES
+## OR
+# PANDAS DATAFRAMES
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s')
+    format='[%(asctime)s] - %(levelname)s : %(message)s') # maybe terminal doesnt need time and levelname
 
 file_handler = logging.FileHandler(f"{LOGS_PATH}botlogs.log")
 file_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter('[%(asctime)s] - %(levelname)s : %(message)s')
 file_handler.setFormatter(formatter)
 
 logging.getLogger().addHandler(file_handler)
@@ -60,6 +58,7 @@ Boot start: {datetime.datetime.now()}
 """
     await channel_id.send(boot_message)
 
+
 @bot.command()#(aliases=["quit"])
 @commands.has_permissions(administrator=True)
 async def shutdown(ctx):
@@ -67,24 +66,11 @@ async def shutdown(ctx):
     logger.debug("Bot Closed")
     await bot.close()
 
-
 # every day: get the date, and check if its tomorrow or not
 # - if tomorrow: print a message for everyone
 # 
 
-brilliant = ['brilliant', 'Brilliant', 'brilliant!', 'Brilliant!']
-
-@bot.event
-async def on_message(message):
-    if message.author == bot.user:
-        return  
-    msg = message.content.lower()
-
-    if any(word in msg for word in brilliant):
-        await message.channel.send("Brilliant!")
-        logger.info(f'sent message Brilliant!')
-    await bot.process_commands(message)
-
+    
 @bot.command()
 async def upgrade(ctx,password):
     """reboots the whole bot, and updates it from Github"""
@@ -96,7 +82,6 @@ async def upgrade(ctx,password):
         return 0
     logger.info("BOT SHUTDOWN")
     await bot.close()
-
 
 @bot.command()
 async def admin_guess(ctx,password,date,guess,event):
@@ -152,19 +137,31 @@ async def admin_update(ctx):
 async def guess(ctx):
     """Allows the user to make a guess"""
     await ctx.send("Fetching has begun... may take a while")
-    #f1_drivers_info = f1_schedule.get_session_drivers()
-    url = "https://ergast.com/api/f1/2023/14/drivers.json"
-    response = requests.get(url)
+    #url = "https://ergast.com/api/f1/2023/14/drivers.json" # deprecated
+    #url = "https://www.formula1.com/en/results.html/2023/races/1218/italy/race-result.html"
+    url = "https://www.formula1.com/en/results.html/2023/drivers.html"
+    response = requests.get(url).text
+    logger.info("Successfully requested URL")
+    soup = BeautifulSoup(response, 'html.parser')
 
-    f1_drivers_info = json.loads(requests.get(url).content.decode('utf-8'))
-    #logger.info(f"{f1_drivers_info = }")
-    df = pd.DataFrame(f1_drivers_info)
-    logger.info(f'{df["MRData"]["DriverTable"]["Drivers"]}')
-    # break it into drivers
-    f1_races = F1_RACES.copy()
-    
-    select_race = discord.ui.Select(placeholder="Choose a race!",options=[discord.SelectOption(label=race_name, description="NONE") for race_name in f1_races])
-    select_driver = discord.ui.Select(placeholder="Choose a driver",options=[discord.SelectOption(label=driver[0], description=driver[1]) for driver in f1_drivers_info])
+    surnames = soup.find_all('span', class_="hide-for-mobile")
+    firstnames = soup.find_all('span', class_="hide-for-tablet")
+    carnames = soup.find_all('a', class_="grey semi-bold uppercase ArchiveLink")
+    drivers_surnames = [name.get_text() for name in surnames]
+    drivers_firstnames = [name.get_text() for name in firstnames]
+    cars = [name.get_text() for name in carnames]
+    drivers_fullname = list(zip(drivers_firstnames,drivers_surnames))
+    drivers_info = list(zip(drivers_fullname,cars)) # (('Max', 'Verstappen'), 'Red Bull Racing Honda RBPT')
+    select_race = discord.ui.Select(placeholder="Choose a race!",options=[discord.SelectOption(label=race_name, description="NONE") for race_name in F1_RACES])
+    select_driver = discord.ui.Select(
+        placeholder="Choose a driver",
+        options=[
+            discord.SelectOption(
+                label=str(driver[0][0]+" "+driver[0][1]), 
+                description=driver[1]
+                ) 
+                for driver in drivers_info]
+                )
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
     
     theView = discord.ui.View()
@@ -179,17 +176,19 @@ async def guess(ctx):
         await interaction.response.send_message("")
 
     async def button_callback(interaction):
-        db_manager.append_db(GUESS_FILE,f1_schedule.get_present(),ctx.author.name,f1_schedule.get_future_sessions()[0][0],select_race.values[0],select_driver.values[0])
-        print("DB-MANAGER appended guess")
-        await interaction.response.send_message("You have submitted your guess!")# todo: print everything at once
+        logger.info(f"{ctx.author.name},{select_race.values[0]},{select_driver.values[0]}")
+        await interaction.response.send_message("You have submitted your guess!")
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
     press_button.callback = button_callback
     await ctx.send("Choose driver and race type", view=theView)
-    """
-    guesses could be stored 
-    """
+
+# func to print user's current guess list 
+
+# each race has their own id
+#  <option value="1141/bahrain">Bahrain</option>
+
 
 @bot.command()
 async def evaluate(ctx):
