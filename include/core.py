@@ -30,7 +30,7 @@ logging.basicConfig(
     level=logging.DEBUG,
     format='[%(asctime)s] - %(levelname)s : %(message)s') # maybe terminal doesnt need time and levelname
 
-file_handler = logging.FileHandler(f"{LOGS_PATH}botlogs.log")
+file_handler = logging.FileHandler(f"{LOGS_PATH}botlogs.md")
 file_handler.setLevel(logging.DEBUG)
 formatter = logging.Formatter('[%(asctime)s] - %(levelname)s : %(message)s')
 file_handler.setFormatter(formatter)
@@ -266,6 +266,11 @@ async def evaluate(ctx):
     get_fpX_results(3)
 
     sprint_url = "https://www.formula1.com/en/results.html/2023/races/{race_id}/{race_name}/sprint-results.html"
+
+    # send logs as pdf to report
+        #cmd = f'pandoc {LOGS_PATH}botlogs.md -o {UPLOADS_PATH}bot_logs.pdf'
+        #os.system(cmd)        
+        #await ctx.send(file=discord.File(UPLOADS_PATH+"bot_logs.pdf"))
 
     return
     #get_previous_event_results = 
