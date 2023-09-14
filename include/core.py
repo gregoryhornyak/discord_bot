@@ -1,13 +1,14 @@
 # This example requires the 'members' and 'message_content' privileged intents to function.
 
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import datetime
 import os
 import logging
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import json
 
 TOKEN_PATH = "resources/token/"
 PASSW_PATH = "resources/passw"
@@ -57,7 +58,6 @@ is running in {channel_id.name} channel
 Boot start: {datetime.datetime.now()}
 """
     await channel_id.send(boot_message)
-
 
 @bot.command()#(aliases=["quit"])
 @commands.has_permissions(administrator=True)
@@ -132,7 +132,8 @@ async def admin_update(ctx):
 
     await ctx.send("Choose driver who won and the race type they won in", view=view)
 
-@bot.command()
+
+@bot.command(name='guess', brief='guess driver and race_type')
 async def guess(ctx):
     """Allows the user to make a guess"""
     await ctx.send("Fetching has begun... may take a while")
@@ -176,12 +177,34 @@ async def guess(ctx):
 
     async def button_callback(interaction):
         logger.info(f"{ctx.author.name},{select_race.values[0]},{select_driver.values[0]}")
+        data = {
+            "user_name": ctx.author.name,
+            "race_type": select_race.values[0],
+            "driver_name": select_driver.values[0]
+            }
+        
+        try:
+            with open(f"{GUESS_FILE}guess_db.json", "r") as f:
+                guesses_database = json.load(f)
+        except FileNotFoundError:
+            guesses_database = {}
+            logger.error("No guess_db found")
+
+        present = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")
+        guesses_database[present] = data
+        logger.info("Guess_db updated")
+
+        with open(f"{GUESS_FILE}guess_db.json", "w") as f:
+                json.dump(guesses_database, f, indent=4)
+
+        logger.info("Guess saved")
+
         await interaction.response.send_message("You have submitted your guess!")
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
     press_button.callback = button_callback
-    await ctx.send("Choose driver and race type", view=theView)
+    await ctx.send("Choose driver and race type\n**(use this form for multiple guesses)**", view=theView)
 
 # func to print user's current guess list 
 
@@ -189,24 +212,26 @@ async def guess(ctx):
 #  <option value="1141/bahrain">Bahrain</option>
 
 @bot.command()
-async def evaluate(ctx):
+async def eval(ctx):
     """read the results, and compare them with the guesses
     could only happen after the race"""
+
+    # headers: | Pos No Driver Car Laps Time/Retired PTS
 
     # get previous race id and name to request the race
     all_races_url = "https://www.formula1.com/en/results.html/2023/races.html"
     all_races_response = requests.get(all_races_url).text
-    logger.info("Successfully requested URL")
+    #logger.info("Successfully requested URL")
     all_races_soup = BeautifulSoup(all_races_response, 'html.parser')
     
     race_names = all_races_soup.find_all('a', class_="dark bold ArchiveLink")
     race_names_text = [name.get_text().strip() for name in race_names]
-    logger.info(f"{race_names_text = }")
+    #logger.info(f"{race_names_text = }")
 
     race_ids = all_races_soup.find_all('a', class_='ArchiveLink')
     race_ids_text = [name.get('href') for name in race_ids]
     race_ids_text_splitted = [name.split('/')[5] for name in race_ids_text]
-    logger.info(f"{race_ids_text_splitted = }")
+    #logger.info(f"{race_ids_text_splitted = }")
     
     previous_race_id = race_ids_text_splitted[-1]
     previous_race_name = race_names_text[-1]
@@ -220,17 +245,32 @@ async def evaluate(ctx):
     driver_results_all_text = [name.get_text().strip() for name in driver_results_all]
     driver_results_all_text_split = [name.split("\n") for name in driver_results_all_text]
     driver_results_all_filtered_list = [[item for item in original_list if item != ''] for original_list in driver_results_all_text_split]
-    
     header_list = driver_results_all_filtered_list[0]
     driver_results_all_filtered_list = driver_results_all_filtered_list[1:]
     join_names = lambda arr: ' '.join(arr[2:4])
     dr_res_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_all_filtered_list]
     driver_results_all_df = pd.DataFrame(dr_res_all_modified_data, columns=header_list)
-    logger.info(f"{driver_results_all_df = }")
-    # headers: | Pos No Driver Car Laps Time/Retired PTS
-    driver_results_all_df_message = driver_results_all_df.loc[:2, ['Driver', 'Time/Retired', 'PTS']]
-    await ctx.send(driver_results_all_df_message.to_string(index=False, justify='left'))
-    #logger.info(f"sent df {driver_results_all_df_message.to_string(index=False, justify='left') = }")
+    #logger.info(f"{driver_results_all_df = }")
+    
+    r1st = driver_results_all_df.loc[0]['Driver']
+    r2nd = driver_results_all_df.loc[1]['Driver']
+    r3rd = driver_results_all_df.loc[2]['Driver']
+    
+    r_botr = ""
+
+    for (driver, team) in (zip(driver_results_all_df['Driver'], driver_results_all_df['Car'])):
+        if team not in ['Ferrari','Red Bull Racing Honda RBPT','Mercedes']:
+            r_botr = driver
+            logger.info(f"{r_botr = }")
+            break
+
+    r_dnf = 0
+
+    for state in driver_results_all_df['Time/Retired']:
+        if state in ['DNS','DNF']:
+            r_dnf += 1
+
+
 
     # find out QUALIFYING results in previous race
     previous_race_q_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/qualifying.html"
@@ -244,8 +284,25 @@ async def evaluate(ctx):
     driver_results_q_all_filtered_list = driver_results_q_all_filtered_list[1:]
     dr_res_q_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_q_all_filtered_list]
     driver_results_q_all_df = pd.DataFrame(dr_res_q_all_modified_data, columns=header_list)
-    logger.info(f"{driver_results_q_all_df = }")
+    #logger.info(f"{driver_results_q_all_df = }")
+
+    q1st = driver_results_q_all_df.loc[0]['Driver']
+    q2nd = driver_results_q_all_df.loc[1]['Driver']
+    q3rd = driver_results_q_all_df.loc[2]['Driver']
     
+    q_botr = ""
+
+    #logger.info(f"{driver_results_q_all_df.loc[:, ['Driver','Car']] = }")
+    
+
+    # not Ferrari, Red Bull or Mercedes
+    #for [driver,team] in driver_results_q_all_df.loc[:, ['Driver','Car']]:
+    for (driver, team) in (zip(driver_results_q_all_df['Driver'], driver_results_q_all_df['Car'])):
+        if team not in ['Ferrari','Red Bull Racing Honda RBPT','Mercedes']:
+            q_botr = driver
+            logger.info(f"{q_botr = }")
+            break
+
     def get_fpX_results(num):
     # find out FP1 results in previous race
         previous_race_fp1_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/practice-{num}.html"
@@ -259,33 +316,165 @@ async def evaluate(ctx):
         driver_results_fp1_all_filtered_list = driver_results_fp1_all_filtered_list[1:]
         dr_res_fp1_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_fp1_all_filtered_list]
         driver_results_fp1_all_df = pd.DataFrame(dr_res_fp1_all_modified_data, columns=header_list)
-        logger.info(f"FP{num} results: {driver_results_fp1_all_df = }")
+        #logger.info(f"FP{num} results: {driver_results_fp1_all_df = }")
+        return driver_results_fp1_all_df.loc[0]['Driver']
         
-    get_fpX_results(1)
-    get_fpX_results(2)
-    get_fpX_results(3)
+    fp1_results = get_fpX_results(1)
+    fp2_results = get_fpX_results(2)
+    fp3_results = get_fpX_results(3)
 
-    sprint_url = "https://www.formula1.com/en/results.html/2023/races/{race_id}/{race_name}/sprint-results.html"
+    # https://www.formula1.com/en/results.html/2023/races/1216/belgium/race-result.html
+    # find sprint results
+    sprint_race_id = "1216"
+    sprint_race_name = "belgium"
+    sprint_url = f"https://www.formula1.com/en/results.html/2023/races/{sprint_race_id}/{sprint_race_name}/sprint-results.html"
+    previous_race_s_response = requests.get(sprint_url).text
+    driver_results_s_all_soup = BeautifulSoup(previous_race_s_response, 'html.parser')
+    driver_results_s_all = driver_results_s_all_soup.find_all('tr')
+    driver_results_s_all_text = [name.get_text().strip() for name in driver_results_s_all]
+    driver_results_s_all_text_split = [name.split("\n") for name in driver_results_s_all_text]
+    driver_results_s_all_filtered_list = [[item for item in original_list if item != ''] for original_list in driver_results_s_all_text_split]
+    header_list = driver_results_s_all_filtered_list[0]
+    join_names = lambda arr: ' '.join(arr[2:4])
+    driver_results_s_all_filtered_list = driver_results_s_all_filtered_list[1:]
+    dr_res_s_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_s_all_filtered_list]
+    driver_results_s_all_df = pd.DataFrame(dr_res_s_all_modified_data, columns=header_list)
+    #logger.info(f"{driver_results_s_all_df = }")
 
-    # send logs as pdf to report
-        #cmd = f'pandoc {LOGS_PATH}botlogs.md -o {UPLOADS_PATH}bot_logs.pdf'
-        #os.system(cmd)        
-        #await ctx.send(file=discord.File(UPLOADS_PATH+"bot_logs.pdf"))
+    # driver of the day
+    dotd_url = "https://www.formula1.com/en/latest/article.driver-of-the-day-2023.5wGE2ke3SFqQwabYVQXLnF.html"
+    previous_race_dotd_response = requests.get(dotd_url).text
+    previous_race_dotd_soup = BeautifulSoup(previous_race_dotd_response, 'html.parser')
+    previous_race_dotd_all = previous_race_dotd_soup.find_all('strong')
+    previous_race_dotd_all_text = [name.get_text().strip() for name in previous_race_dotd_all]
+    dotd_list = previous_race_dotd_all_text[1]#latest
+    # 'Carlos Sainz - 31.5%\nSergio Perez - 14.8%\nMax Verstappen - 13.3%\nAlex Albon - 10.7%\nCharles Leclerc - 6%',
+    dotd = dotd_list.split("\n")[0]
+    dotd_name = dotd.split("-")[0].strip()
+    #logger.info(f"{dotd_name =}")
 
-    return
-    #get_previous_event_results = 
+    rf_url = "https://www.formula1.com/en/results.html/2023/fastest-laps.html"
+    race_fastest_lap_request = requests.get(rf_url).text
+    race_fastest_lap_soap = BeautifulSoup(race_fastest_lap_request, 'html.parser')
+    race_fastest_lap_all = race_fastest_lap_soap.find_all('tr')
+    race_fastest_lap_all_text = [name.get_text().strip() for name in race_fastest_lap_all]
+    race_fastest_lap_all_text_split = [name.split("\n") for name in race_fastest_lap_all_text]
+    race_fastest_lap_all_filtered = [[item for item in original_list if item != ''] for original_list in race_fastest_lap_all_text_split]
+    header_list = race_fastest_lap_all_filtered[0]
+    join_names = lambda arr: ' '.join(arr[1:3])
+    race_fastest_lap_all_filtered = race_fastest_lap_all_filtered[1:]
+    race_fastest_lap_all_modified = [[*arr[:1], join_names(arr), *arr[4:]] for arr in race_fastest_lap_all_filtered]
+    race_fastest_lap_all_df = pd.DataFrame(race_fastest_lap_all_modified, columns=header_list)
+    #logger.info(f"{race_fastest_lap_all_df.iloc = }")
 
-    for id,values in results.items():
-        for race in F1_RACES:
-            if values["event_id"] == current_event_id: # event found
-                if values["race"] == race:
-                    winners.append([race,values["driver"]])
-                    
+    r_f = race_fastest_lap_all_df.iloc[-1]['Driver']
+    """
+    logger.info(f"FP1: {fp1_results}")
+    logger.info(f"FP2: {fp2_results}")
+    logger.info(f"FP3: {fp3_results}")
 
-    # collect every user and their guesses for this event sorted by date
-    # compare result and user guess, create a new db on points for each user
-    # say hint to get results
-    await ctx.send("jelenleg a joanyad fog kiértékelni, amikor nincs mibű")
+    logger.info(f"Q1st: {q1st}")
+    logger.info(f"Q2nd: {q2nd}")
+    logger.info(f"Q3rd: {q3rd}")
+    logger.info(f"Q-BOTR: {q_botr}")
+
+    logger.info(f"R1st: {r1st}")
+    logger.info(f"R2nd: {r2nd}")
+    logger.info(f"R3rd: {r3rd}")
+    logger.info(f"R-BOTR: {r_botr}")
+
+    logger.info(f"DOTD: {dotd_name}")
+    logger.info(f"R-F: {r_f}")
+    logger.info(f"R-DNF: {r_dnf}")
+    """
+    scores = f"""
+FP1: {fp1_results}
+FP2: {fp2_results}
+FP3: {fp3_results}
+Q1st: {q1st}
+Q2nd: {q2nd}
+Q3rd: {q3rd}
+Q-BOTR: {q_botr}
+R1st: {r1st}
+R2nd: {r2nd}
+R3rd: {r3rd}
+R-BOTR: {r_botr}
+DOTD: {dotd_name}
+R-F: {r_f}
+R-DNF: {r_dnf}
+    """
+
+
+
+
+    #await ctx.send(scores)
+    await ctx.send("Faszt kapsz te, nem kiértékelést")
+    await ctx.send("Najó, kiértékelést akarsz?\szar vagy. meg buzi :D")
+    #await ctx.send(file=discord.File(UPLOADS_PATH+"verstappen.mp3"))
+
+    
+
+    # evaluating method / system:
+    # 1. find all the users who guessed (if didnt, out of game)
+    # 2. if more guesses under same race_type then latest matters.
+    # 3. if didnt guess in a race_type then doesnt get points
+
+    # collect users
+
+    #user_guesses = pd.read_json(f"{GUESS_FILE}guess_db.json")
+    with open(f"{GUESS_FILE}guess_db.json", "r") as f:
+                guesses_database = json.load(f)
+    user_guesses = pd.DataFrame.from_dict(guesses_database, orient='index')
+    user_guesses.reset_index(inplace=True)
+    user_guesses.rename(columns={'index': 'time_stamp'}, inplace=True)
+    user_guesses_reversed = user_guesses.iloc[::-1]
+    logger.info(f"{user_guesses_reversed = }")
+    # appropriate table ready
+
+    greghornyak = user_guesses_reversed[user_guesses_reversed['user_name'] == 'GregHornyak']
+    logger.info(f"{greghornyak = }")
+    logger.info(f"{greghornyak.drop_duplicates(subset=['race_type']) = }")
+
+    scores_json = {
+    "FP1": fp1_results,
+    "FP2": fp2_results,
+    "FP3": fp3_results,
+    "Q1st": q1st,
+    "Q2nd": q2nd,
+    "Q3rd": q3rd,
+    "Q-BOTR": q_botr,
+    "R1st": r1st,
+    "R2nd": r2nd,
+    "R3rd": r3rd,
+    "R-BOTR": r_botr,
+    "DOTD": dotd_name,
+    "R-F": r_f,
+    "R-DNF": r_dnf,
+    }
+
+    #users_in_game = user_guesses['user_name'].unique()
+
+    #logger.info(f"{users_in_game}") # [0] for 0th element
+
+    for state in driver_results_all_df['Time/Retired']:
+        pass
+
+@bot.command()
+async def rules(ctx):
+    rule_book = """
+Rules for guessing:
+1. find all the users who guessed (if didnt, out of game)
+2. if more guesses under same race_type then latest matters.
+3. if didnt guess in a race_type then doesnt get points
+"""
+    await ctx.send(rule_book)
+
+@bot.command()
+async def getlogs(ctx):
+    """ send logs as pdf to report"""
+    cmd = f'pandoc {LOGS_PATH}botlogs.md -o {UPLOADS_PATH}bot_logs.pdf'
+    os.system(cmd)        
+    await ctx.send(file=discord.File(UPLOADS_PATH+"bot_logs.pdf"))
 
 @bot.command()
 async def showlast(ctx):
@@ -323,6 +512,17 @@ async def last_results(ctx,prev=0):
 
 
 ## For fun
+
+@bot.command()
+async def play_music(ctx):
+    await ctx.connect()
+    server = ctx.message.guild
+    voice_channel = server.voice_client
+    async with ctx.typing():
+        player = await YTDLSource.from_url(playlist[0], loop=client.loop)
+        voice_channel.play(player, after=lambda e: asyncio.run_coroutine_threadsafe(after_play(ctx), client.loop))
+        print(player.title)
+    await ctx.send('**Now playing:** {}'.format(player.title))
 
 @bot.command()
 async def dako(ctx, length):
