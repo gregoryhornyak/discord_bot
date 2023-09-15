@@ -23,6 +23,8 @@ F1_RACES = ["FP1","FP2","FP3",
             "R1st","R2nd","R3rd","R-BOTR",
             "R-DOTD","R-F","R-DNF"]
 
+target_date = datetime.datetime(2023, 9, 15, 2, 14, 0)
+
 # USE JSON AND DICTIONARIES
 ## OR
 # PANDAS DATAFRAMES
@@ -58,6 +60,7 @@ is running in {channel_id.name} channel
 Boot start: {datetime.datetime.now()}
 """
     await channel_id.send(boot_message)
+
 
 @bot.command()#(aliases=["quit"])
 @commands.has_permissions(administrator=True)
@@ -270,8 +273,6 @@ async def eval(ctx):
         if state in ['DNS','DNF']:
             r_dnf += 1
 
-
-
     # find out QUALIFYING results in previous race
     previous_race_q_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/qualifying.html"
     previous_race_q_response = requests.get(previous_race_q_url).text
@@ -293,7 +294,6 @@ async def eval(ctx):
     q_botr = ""
 
     #logger.info(f"{driver_results_q_all_df.loc[:, ['Driver','Car']] = }")
-    
 
     # not Ferrari, Red Bull or Mercedes
     #for [driver,team] in driver_results_q_all_df.loc[:, ['Driver','Car']]:
@@ -387,29 +387,7 @@ async def eval(ctx):
     logger.info(f"R-F: {r_f}")
     logger.info(f"R-DNF: {r_dnf}")
     """
-    scores = f"""
-FP1: {fp1_results}
-FP2: {fp2_results}
-FP3: {fp3_results}
-Q1st: {q1st}
-Q2nd: {q2nd}
-Q3rd: {q3rd}
-Q-BOTR: {q_botr}
-R1st: {r1st}
-R2nd: {r2nd}
-R3rd: {r3rd}
-R-BOTR: {r_botr}
-DOTD: {dotd_name}
-R-F: {r_f}
-R-DNF: {r_dnf}
-    """
 
-
-
-
-    #await ctx.send(scores)
-    await ctx.send("Faszt kapsz te, nem kiértékelést")
-    await ctx.send("Najó, kiértékelést akarsz?\szar vagy. meg buzi :D")
     #await ctx.send(file=discord.File(UPLOADS_PATH+"verstappen.mp3"))
 
     scores_json = {
@@ -449,20 +427,14 @@ R-DNF: {r_dnf}
     users_in_game = user_guesses['user_name'].unique()
 
     for user in users_in_game:
-
         cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user]
-        #logger.info(f"{cur_user = }")
-        #logger.info(f"{cur_user.drop_duplicates(subset=['race_type']) = }")
         cur_user_unique = cur_user.drop_duplicates(subset=['race_type'])
-
         for (guessed_race_type, guessed_driver_name) in (zip(cur_user_unique['race_type'], cur_user_unique['driver_name'])):
             for race_type,driver_name in scores_json.items():
                 if guessed_race_type == race_type:
                     if guessed_driver_name == driver_name:
                         logger.info(f"{user}: match! {driver_name},{race_type}")
                         await ctx.send(f"{user} guessed correct: {driver_name} | {race_type} - X points!")
-
-
 
 @bot.command()
 async def rules(ctx):

@@ -2,7 +2,6 @@ import sys
 sys.path.append('.')
 from include import core
 
-
 def main():
 
     core.logger.info("Discord bot started")
