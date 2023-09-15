@@ -407,6 +407,8 @@ async def eval(ctx):
     "R-DNF": r_dnf,
     }
 
+    await ctx.send(scores_json)
+
     # evaluating method / system:
     # 1. find all the users who guessed (if didnt, out of game)
     # 2. if more guesses under same race_type then latest matters.
