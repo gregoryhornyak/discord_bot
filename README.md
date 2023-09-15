@@ -27,7 +27,7 @@
   - event ✅
   - driver ✅
 - User can retrieve their guesses in form of a picture ✅
-- Evaluate user guesses based on results,
+- Evaluate user guesses based on results ✅
 - Inform clients on upcoming event date,
 - Working in DM as well,
 - Working parallelly, having multiple clients,
@@ -82,7 +82,7 @@ The repository uses **python venv**, which needs to be initialised beforehand, a
 
 A brief tutorial on setup is available [here](docs/setup.md).
 
-## Mayor Update
+## Mayor Update 1
 
 **Formula One Discord Bot** is moving away from FastF1 Python package:
 
@@ -90,6 +90,10 @@ A brief tutorial on setup is available [here](docs/setup.md).
 - custom json requests are easier to make using Ergast directly
 
 In the future, the Formula One Discord Bot is going to use Ergast as main information source for Race, Qualification, Finishing Status and Race schedules
+
+#Mayor Update 2
+
+**Formula One Discord Bot** is not going to use Ergast as primary API, because Ergast API is going to be deprecated in 2024.
 
 ---
 
@@ -102,7 +106,9 @@ In addition, responsible for making the json requests from Ergast.
 
 The database manager, handling the storing and retrieving actions, when dealing with the database(s).
 
-A logging machine.
+The request_manager, handling the requests to Formula One official website.
+
+~~logging machine~~
 
 ~~The F1-API - a python package - fetching the F1 race data.~~
 
@@ -113,4 +119,3 @@ A logging machine.
 J. Gergely Hornyak as **developer**
 
 Gabor Korecz as **technical support** and **testing**
-
