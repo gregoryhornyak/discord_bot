@@ -1,6 +1,7 @@
 # Formula One Discord Bot
 
-![Version](https://img.shields.io/badge/version-0.3-green) ![Deps](https://img.shields.io/badge/dependencies-up_to_date-green) ![Python](https://img.shields.io/badge/python-3.10-yellow) ![build](https://img.shields.io/badge/build-passing-yellow)
+![Version](https://img.shields.io/badge/version-0.3-green) ![Deps](https://img.shields.io/badge/dependencies-up_to_date-green) ![Python](https://img.shields.io/badge/python-3.10-yellow) ![build](https://img.shields.io/badge/build-passing-yellow) ![build](https://img.shields.io/badge/code_coverage-0-red)
+
 
 ### Automated bot for a Discord server
 
