@@ -1,4 +1,4 @@
-# This example requires the 'members' and 'message_content' privileged intents to function.
+# This example requires the 'members' and 'message_content' privileged intents to function, therefore using intents=discord.Intents.all()
 
 import discord
 from discord.ext import commands, tasks
@@ -9,24 +9,29 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import json
+import asyncio
+from dateutil.parser import parse
 
 TOKEN_PATH = "resources/token/"
-PASSW_PATH = "resources/passw"
+PASSW_PATH = "resources/passw/"
 UPLOADS_PATH = "resources/uploads/"
 GUESS_FILE = "resources/guesses/"
 SCORES_FILE = "resources/scores/"
 LOGS_PATH = "resources/logs/"
-VERSION = "0.1.2"
+MANIFEST_PATH = "docs/manifest/"
+UPCOMING_DATE_PATH = "resources/data/"
 
 F1_RACES = ["FP1","FP2","FP3",
             "Q1st","Q2nd","Q3rd","Q-BOTR",
             "R1st","R2nd","R3rd","R-BOTR",
             "R-DOTD","R-F","R-DNF"]
 
-target_date = datetime.datetime(2023, 9, 15, 2, 14, 0)
+CHANNEL_ID = 1078427611597906004
 
-# USE JSON AND DICTIONARIES
-## OR
+#target_date = datetime.datetime(2023, 9, 15, 2, 14, 0)
+
+# USE JSON
+## AND
 # PANDAS DATAFRAMES
 
 logging.basicConfig(
@@ -50,34 +55,78 @@ bot = commands.Bot(command_prefix='!',
 
 # event based functions
 
+async def schedule_daily_message():
+    loop_counter = 0
+    while True:
+        channel = bot.get_channel(CHANNEL_ID)
+        try:
+            with open(f"{UPCOMING_DATE_PATH}upcoming_date", "r") as f:
+                upcoming_date = f.readline()
+                upcoming_date = parse(upcoming_date)
+            logger.info(f"Date set for: {upcoming_date}")
+        except FileNotFoundError:
+            logger.info("Not found")
+
+        now = datetime.datetime.now()
+        if now.day+1 == upcoming_date.day:
+            logger.info(f"date is tomorrow!")
+            await channel.send("@everyone the race is tomorrow!",delete_after=5)
+        elif now.day+3 == upcoming_date.day:
+            logger.info(f"3 days until race!")
+            await channel.send("@everyone 3 days until the race!",delete_after=5)
+        #then = now.replace(minute=21)
+        #wait_time = (then-now).total_seconds()
+        loop_counter += 1
+        logger.info(f"{loop_counter = }")
+        await asyncio.sleep(30)
+
 @bot.event
 async def on_ready():
     logger.info(f'Logged in as {bot.user}\n------\n')
-    channel_id = bot.get_channel(1078427611597906004)
+    channel_id = bot.get_channel(CHANNEL_ID)
+    with open(f"{MANIFEST_PATH}manifest.json",'r') as f:
+        manifest_info = json.load(f)
     boot_message = f"""
-    Formula One Discord Bot v{VERSION}
+    {manifest_info['bot_name']} v{manifest_info['version']}
 is running in {channel_id.name} channel
 Boot start: {datetime.datetime.now()}
+Created by {manifest_info['developer']}
 """
-    await channel_id.send(boot_message)
+    await channel_id.send(boot_message,delete_after=5)
+    # create resources directory and subdirectories
+
+    try:
+        directory = "resources"
+        path = os.path.join('./', directory)
+        os.mkdir(path)
+        print("Directory '% s' created" % directory)
+    except FileExistsError:
+        logger.info("Resources dir already exists")
+
+    await schedule_daily_message()
 
 
-@bot.command()#(aliases=["quit"])
-@commands.has_permissions(administrator=True)
-async def shutdown(ctx):
-    await ctx.send("Bot will shutdown in 1sec")
-    logger.debug("Bot Closed")
-    await bot.close()
+@bot.command()
+async def spy(ctx):
+    guilds = bot.guilds
+    guild = str(guilds).split("=")[1].split()[0]
+    guild = int(guild)
+    #guild = bot.get_guild(1078427611597906001)
+    logger.info(f"manual: {guild = }")
 
-# every day: get the date, and check if its tomorrow or not
-# - if tomorrow: print a message for everyone
-# 
+    if guild:
+        for member in guild.members:
+            logger.info(f"{member.name}: <@{member.discriminator}>")
+            await ctx.send(f"{member.name}: <@{member.id}>")
+    else:
+        logger.info("Guild not found")
+
 
 @bot.command()
 async def upgrade(ctx,password):
     """reboots the whole bot, and updates it from Github"""
     password_stored = ""
-    with open(f"{PASSW_PATH}",'r') as f:
+    with open(f"{PASSW_PATH}passphrase",'r') as f:
         password_stored = f.read()
     if password!=password_stored:
         await ctx.send("Wrong password")
@@ -85,63 +134,13 @@ async def upgrade(ctx,password):
     logger.info("BOT SHUTDOWN")
     await bot.close()
 
-@bot.command()
-async def admin_guess(ctx,password,date,guess,event):
-    """allows the admin to make an artificial guess
-    pw - date - guess - event
-    date e.g.: 2023-05-08 15:11:26.272478
-    """
-    if password!="segg":
-        await ctx.send("Wrong pass")
-        return 0
-    print(f"\n\n{date}\n{guess}\n{event}\n\n")
-    regex_pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d+" # datetime regex
-    print(f"{re.findall(regex_pattern, date) = }")
-    if re.findall(regex_pattern, date)[0] != date:
-        raise Exception
-    db_manager.append_db(GUESS_FILE,date,ctx.author.name,event,guess)
-    await ctx.send(f"Successfully saved:\n{date}\n{guess}\n{event}")
-
-@bot.command()
-async def admin_update(ctx):
-    """allows the admin to update the database"""
-    await ctx.send("Fetching has begun... may take a while")
-    f1_drivers_info = f1_schedule.get_session_drivers()
-    select_race = discord.ui.Select(placeholder="Choose a race type:",options=
-        [discord.SelectOption(label=race_name) for race_name in F1_RACES])
-    select_driver = discord.ui.Select(placeholder="Choose a driver who won on this race:",options=
-        [discord.SelectOption(label=driver[0], description=driver[1]) for driver in f1_drivers_info])
-    press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
-    view = discord.ui.View()
-    view.add_item(select_driver)
-    view.add_item(select_race)
-    view.add_item(press_button)
-
-    async def driver_callback(interaction):
-        await interaction.response.send_message("a")
-
-    async def race_callback(interaction):
-        await interaction.response.send_message("a")
-
-    async def button_callback(interaction):
-        session_dates = f1_schedule.get_future_sessions()
-        db_manager.store_results(RESULTS_FILE,2023,session_dates[0][0],select_race.values[0],select_driver.values[0])
-        print("DB-MANAGER has appended the result")
-        await interaction.response.send_message(f"You have updated:\nrace type: {select_race.values[0]}\nwinner driver: {select_driver.values[0]}\n")# print everything at once
-
-    select_driver.callback = driver_callback
-    select_race.callback = race_callback
-    press_button.callback = button_callback
-
-    await ctx.send("Choose driver who won and the race type they won in", view=view)
-
-
-@bot.command(name='guess', brief='guess driver and race_type')
+@bot.command(aliases=["g"])
 async def guess(ctx):
     """Allows the user to make a guess"""
     await ctx.send("Fetching has begun... may take a while")
-    #url = "https://ergast.com/api/f1/2023/14/drivers.json" # deprecated
-    #url = "https://www.formula1.com/en/results.html/2023/races/1218/italy/race-result.html"
+
+    # save the data into a file, to avoid long fetching
+
     drivers_url = "https://www.formula1.com/en/results.html/2023/drivers.html"
     drivers_request = requests.get(drivers_url).text
     logger.info("Successfully requested URL")
@@ -155,18 +154,12 @@ async def guess(ctx):
     cars = [name.get_text() for name in carnames]
     drivers_fullname = list(zip(drivers_firstnames,drivers_surnames))
     drivers_info = list(zip(drivers_fullname,cars)) # (('Max', 'Verstappen'), 'Red Bull Racing Honda RBPT')
-    select_race = discord.ui.Select(placeholder="Choose a race!",options=[discord.SelectOption(label=race_name, description="NONE") for race_name in F1_RACES])
-    select_driver = discord.ui.Select(
-        placeholder="Choose a driver",
-        options=[
-            discord.SelectOption(
-                label=str(driver[0][0]+" "+driver[0][1]), 
-                description=driver[1]
-                ) 
-                for driver in drivers_info]
-                )
+    select_race = discord.ui.Select(placeholder="Choose a race!",
+                                    options=[discord.SelectOption(label=race_name, description="NONE") for race_name in F1_RACES])
+    select_driver = discord.ui.Select(placeholder="Choose a driver",
+                                      options=[discord.SelectOption(label=str(driver[0][0]+" "+driver[0][1]),
+                                                                    description=driver[1]) for driver in drivers_info])
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
-    
     theView = discord.ui.View()
     theView.add_item(select_race)
     theView.add_item(select_driver)
@@ -214,13 +207,13 @@ async def guess(ctx):
 # each race has their own id
 #  <option value="1141/bahrain">Bahrain</option>
 
-@bot.command()
+@bot.command(aliases=["e"])
 async def eval(ctx):
     """read the results, and compare them with the guesses
     could only happen after the race"""
 
     # headers: | Pos No Driver Car Laps Time/Retired PTS
-
+    await ctx.send("Fetching has begun... may take a while")
     # get previous race id and name to request the race
     all_races_url = "https://www.formula1.com/en/results.html/2023/races.html"
     all_races_response = requests.get(all_races_url).text
@@ -448,30 +441,60 @@ Rules for guessing:
 """
     await ctx.send(rule_book)
 
+@bot.command(aliases=["date,when,next"])
+async def setdate(ctx, *, date_input):
+    try:
+        parsed_date = parse(date_input)
+        if parsed_date:
+            # set_date 2023 09 16
+            await ctx.send(f"Race date set to: {parsed_date.strftime('%Y-%m-%d %H:%M:%S')}")
+            logger.info(f"Race date set to: {parsed_date.strftime('%Y-%m-%d %H:%M:%S')}")
+            with open(f"{UPCOMING_DATE_PATH}upcoming_date","w") as f:
+                f.write(parsed_date.strftime('%Y-%m-%d %H:%M:%S'))
+        else:
+            await ctx.send("Invalid date format. Please use a valid date format.")
+    except Exception as e:
+        await ctx.send(f"An error occurred: {str(e)}")
+
 @bot.command()
-async def getlogs(ctx):
+async def getlogs(ctx, num_of_lines=500):
     """ send logs as pdf to report"""
-    cmd = f'pandoc {LOGS_PATH}botlogs.md -o {UPLOADS_PATH}bot_logs.pdf'
+    logger.info(f"getlogs with {num_of_lines} lines")
+    with open(f"{LOGS_PATH}botlogs.md", 'r') as file:
+        lines = file.readlines()[-(num_of_lines):]
+    logger.info(f"read lines")
+    with open(f"{LOGS_PATH}botlogs_extract.md", 'w') as file:
+        for line in lines:
+            file.write(line)
+    logger.info(f"botlogs_extract.md populated")
+    cmd = f'pandoc {LOGS_PATH}botlogs_extract.md -o {UPLOADS_PATH}botlogs_extract.pdf'
     os.system(cmd)        
-    await ctx.send(file=discord.File(UPLOADS_PATH+"bot_logs.pdf"))
+    await ctx.send(file=discord.File(UPLOADS_PATH+"botlogs_extract.pdf"))
+    # only send back last N number of lines to reduce file size
 
-@bot.command()
-async def showlast(ctx):
-    """show your last guess"""
-
-    present = f1_schedule.get_present()
-    user = ctx.author.name
-    date,latest = db_manager.last_entry(GUESS_FILE,user,present)
-    await ctx.send(f"Your last guess was \n{latest['guess']} - {latest['event']} \nguessed on {date[:-10]}")
+@bot.command(aliases=['get_my_guesses','mylast'])
+async def myguesses(ctx):
+    with open(f"{GUESS_FILE}guess_db.json", "r") as f:
+            guesses_database = json.load(f)
+    user_guesses = pd.DataFrame.from_dict(guesses_database, orient='index')
+    user_guesses.reset_index(inplace=True)
+    user_guesses.rename(columns={'index': 'time_stamp'}, inplace=True)
+    user_guesses_reversed = user_guesses.iloc[::-1]
     
-@bot.command()
-async def nextdate(ctx):
-    """show the next event's date"""
-    await ctx.send('Lemme find it...')
-    session_dates = f1_schedule.get_future_sessions()
-    # display the serial number and the date
-    await ctx.send(f'The next {session_dates[0][0]}. event is on {session_dates[0][1]}')
-    logger.info("sent next_date")
+    cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == ctx.author.name]
+
+    cur_user_unique = cur_user.drop_duplicates(subset=['race_type'])
+    cur_user_unique.set_index('race_type', inplace=True)
+    cur_user_unique = cur_user_unique.sort_values(by='race_type')
+    logger.info(cur_user_unique)
+    with open(f"{UPLOADS_PATH}user_guesses_list.md",'w') as f:
+        f.write(f"# {ctx.author.name}'s guess list \n")
+        f.write(cur_user_unique['driver_name'].to_markdown())
+    cmd = f'pandoc {UPLOADS_PATH}user_guesses_list.md -o {UPLOADS_PATH}user_guesses_list.pdf'
+    cmd2 = f'pdftoppm {UPLOADS_PATH}user_guesses_list.pdf {UPLOADS_PATH}user_guesses_list -png'
+    os.system(cmd)
+    os.system(cmd2)
+    await ctx.send(file=discord.File(f"{UPLOADS_PATH}user_guesses_list-1.png"))
 
 @bot.command()
 async def last_results(ctx,prev=0):
@@ -519,6 +542,7 @@ async def dako(ctx, length):
 async def whoami(ctx):
     await ctx.send(f"You are {ctx.author.name}")
     await ctx.send(f"Hey <@{ctx.author.id}>")
+    logger.info(f"{ctx.author.id = }")
 
 @bot.command()
 async def lajos(ctx, pia="palinka"):
@@ -540,7 +564,7 @@ async def lajos(ctx, pia="palinka"):
 Try '!lajos_mp3'"""
     if pia == "palinka":
         for line in script.split('\n'):
-            await ctx.send(line)
+            await ctx.send(line,delete_after=5)
     elif pia == "geci":
         await ctx.send("Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi?")
 
@@ -557,10 +581,9 @@ async def szeretsz_elni(ctx):
     hogyhijjáka a gyász ... 
     meg a szenvedés ...
     Az az életem. :|
-    - Tehát akkor annyira nem szeretsz élni? :)
-    """
+    - Tehát akkor annyira nem szeretsz élni? :)"""
     for line in script.split('\n'):
-        await ctx.send(line)
+        await ctx.send(line,delete_after=4)
 
 @bot.command()
 async def hello(ctx):
@@ -569,7 +592,7 @@ async def hello(ctx):
 
 @bot.command()
 async def kozso(ctx):
-    await ctx.send("Az éérzéések, a szerelem, az ébredések, a kaják, a vizek, a min-mindent imádok!")
+    await ctx.send("Az éérzéések, a szerelem, az ébredések, a kaják, a vizek, a min-mindent imádok!",delete_after=4)
     logger.info("kozso func")
     
 @bot.command()
@@ -579,6 +602,19 @@ async def predict(ctx):
 @bot.command()
 async def vitya(ctx):
     await ctx.send(file=discord.File(UPLOADS_PATH+"vitya.png"))
+
+"""
+Functions not in use:
+
+@bot.command()#(aliases=["quit"])
+@commands.has_permissions(administrator=True)
+async def shutdown(ctx):
+    await ctx.send("Bot will shutdown in 1sec")
+    logger.debug("Bot Closed")
+    await bot.close()
+
+
+"""
 
 # Main function
 
