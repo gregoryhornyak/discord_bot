@@ -28,10 +28,10 @@
   - driver ✅
 - User can retrieve their guesses in form of a picture ✅
 - Evaluate user guesses based on results ✅
-- Inform clients on upcoming event date,
-- Working in DM as well,
-- Working parallelly, having multiple clients,
+- Inform clients on upcoming event date ✅
 - Logging each interaction ✅
+- Working in DM as well,
+- Working parallelly, having multiple clients
 
 ---
 
@@ -111,6 +111,10 @@ The request_manager, handling the requests to Formula One official website.
 ~~logging machine~~
 
 ~~The F1-API - a python package - fetching the F1 race data.~~
+
+Formula One website as source
+
+Discord.py Python package as API module
 
 ---
 
