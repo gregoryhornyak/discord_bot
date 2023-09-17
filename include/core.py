@@ -1,5 +1,7 @@
 # This example requires the 'members' and 'message_content' privileged intents to function, therefore using intents=discord.Intents.all()
 
+#----< Imports >----#
+
 import discord
 from discord.ext import commands, tasks
 import datetime
@@ -12,14 +14,19 @@ import json
 import asyncio
 from dateutil.parser import parse
 
+#----< Constants >----#
+
+UPCOMING_DATE_PATH = "resources/data/"
+SCORE_TABLE_PATH = "resources/data/"
 TOKEN_PATH = "resources/token/"
 PASSW_PATH = "resources/passw/"
 UPLOADS_PATH = "resources/uploads/"
-GUESS_FILE = "resources/guesses/"
+GUESS_FILE = UPCOMING_DATE_PATH
 SCORES_FILE = "resources/scores/"
 LOGS_PATH = "resources/logs/"
 MANIFEST_PATH = "docs/manifest/"
-UPCOMING_DATE_PATH = "resources/data/"
+SCORE_TABLE_PUBLIC_PATH = "docs/"
+
 
 F1_RACES = ["FP1","FP2","FP3",
             "Q1st","Q2nd","Q3rd","Q-BOTR",
@@ -28,11 +35,11 @@ F1_RACES = ["FP1","FP2","FP3",
 
 CHANNEL_ID = 1078427611597906004
 
-#target_date = datetime.datetime(2023, 9, 15, 2, 14, 0)
-
 # USE JSON
 ## AND
 # PANDAS DATAFRAMES
+
+#----< Logger init >----#
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -47,38 +54,19 @@ logging.getLogger().addHandler(file_handler)
 
 logger = logging.getLogger(__name__)
 
+#----< Working directory >----#
+
 current_directory = os.getcwd()
 logger.info(f"{current_directory = }")
+
+#----< Bot init >----#
 
 bot = commands.Bot(command_prefix='!',
                    intents=discord.Intents.all())
 
-# event based functions
+#----< FUNCTIONS >----#
 
-async def schedule_daily_message():
-    loop_counter = 0
-    while True:
-        channel = bot.get_channel(CHANNEL_ID)
-        try:
-            with open(f"{UPCOMING_DATE_PATH}upcoming_date", "r") as f:
-                upcoming_date = f.readline()
-                upcoming_date = parse(upcoming_date)
-            logger.info(f"Date set for: {upcoming_date}")
-        except FileNotFoundError:
-            logger.info("Not found")
-
-        now = datetime.datetime.now()
-        if now.day+1 == upcoming_date.day:
-            logger.info(f"date is tomorrow!")
-            await channel.send("@everyone the race is tomorrow!",delete_after=5)
-        elif now.day+3 == upcoming_date.day:
-            logger.info(f"3 days until race!")
-            await channel.send("@everyone 3 days until the race!",delete_after=5)
-        #then = now.replace(minute=21)
-        #wait_time = (then-now).total_seconds()
-        loop_counter += 1
-        logger.info(f"{loop_counter = }")
-        await asyncio.sleep(30)
+#--------< Event Based Functions >----#
 
 @bot.event
 async def on_ready():
@@ -93,8 +81,8 @@ Boot start: {datetime.datetime.now()}
 Created by {manifest_info['developer']}
 """
     await channel_id.send(boot_message,delete_after=5)
-    # create resources directory and subdirectories
 
+    # create resources directory and subdirectories
     try:
         directory = "resources"
         path = os.path.join('./', directory)
@@ -106,21 +94,32 @@ Created by {manifest_info['developer']}
     await schedule_daily_message()
 
 
-@bot.command()
-async def spy(ctx):
-    guilds = bot.guilds
-    guild = str(guilds).split("=")[1].split()[0]
-    guild = int(guild)
-    #guild = bot.get_guild(1078427611597906001)
-    logger.info(f"manual: {guild = }")
+async def schedule_daily_message():
+    loop_counter = 0
+    while True:
+        channel = bot.get_channel(CHANNEL_ID)
+        try:
+            with open(f"{UPCOMING_DATE_PATH}upcoming_date", "r") as f:
+                upcoming_date = f.readline()
+                upcoming_date = parse(upcoming_date)
+            logger.info(f"Date already set for: {upcoming_date}")
+        except FileNotFoundError:
+            logger.info("Not found")
 
-    if guild:
-        for member in guild.members:
-            logger.info(f"{member.name}: <@{member.discriminator}>")
-            await ctx.send(f"{member.name}: <@{member.id}>")
-    else:
-        logger.info("Guild not found")
+        now = datetime.datetime.now()
+        if now.day+1 >= upcoming_date.day:
+            logger.info(f"date is tomorrow!")
+            await channel.send("@everyone the race is due!",delete_after=3)
+        elif now.day+3 >= upcoming_date.day:
+            logger.info(f"3 days until race!")
+            await channel.send("@everyone 3 days until the race!",delete_after=3)
+        #then = now.replace(minute=21)
+        #wait_time = (then-now).total_seconds()
+        loop_counter += 1
+        logger.info(f"{loop_counter = }")
+        await asyncio.sleep(30)
 
+#--------< Core Command Functions >----#
 
 @bot.command()
 async def upgrade(ctx,password):
@@ -134,7 +133,7 @@ async def upgrade(ctx,password):
     logger.info("BOT SHUTDOWN")
     await bot.close()
 
-@bot.command(aliases=["g"])
+@bot.command(aliases=["g","makeguess"])
 async def guess(ctx):
     """Allows the user to make a guess"""
     await ctx.send("Fetching has begun... may take a while")
@@ -207,64 +206,136 @@ async def guess(ctx):
 # each race has their own id
 #  <option value="1141/bahrain">Bahrain</option>
 
-@bot.command(aliases=["e"])
+@bot.command(aliases=["e","evaluate"])
 async def eval(ctx):
     """read the results, and compare them with the guesses
     could only happen after the race"""
 
     # headers: | Pos No Driver Car Laps Time/Retired PTS
     await ctx.send("Fetching has begun... may take a while")
-    # get previous race id and name to request the race
-    all_races_url = "https://www.formula1.com/en/results.html/2023/races.html"
-    all_races_response = requests.get(all_races_url).text
-    #logger.info("Successfully requested URL")
-    all_races_soup = BeautifulSoup(all_races_response, 'html.parser')
-    
-    race_names = all_races_soup.find_all('a', class_="dark bold ArchiveLink")
-    race_names_text = [name.get_text().strip() for name in race_names]
-    #logger.info(f"{race_names_text = }")
 
-    race_ids = all_races_soup.find_all('a', class_='ArchiveLink')
-    race_ids_text = [name.get('href') for name in race_ids]
-    race_ids_text_splitted = [name.split('/')[5] for name in race_ids_text]
-    #logger.info(f"{race_ids_text_splitted = }")
-    
-    previous_race_id = race_ids_text_splitted[-1]
-    previous_race_name = race_names_text[-1]
+    class F1DataFetcher:
+        # class variables:
+        ## race details
+        prev_race_id = 0
+        prev_race_name = ""
+        free_prac_ser_num = 1
 
-    # find out RACE results in previous race
-    previous_race_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/race-result.html"
-    logger.info(f"{previous_race_url = }")
-    previous_race_response = requests.get(previous_race_url).text
-    driver_results_all_soup = BeautifulSoup(previous_race_response, 'html.parser')
-    driver_results_all = driver_results_all_soup.find_all('tr')
-    driver_results_all_text = [name.get_text().strip() for name in driver_results_all]
-    driver_results_all_text_split = [name.split("\n") for name in driver_results_all_text]
-    driver_results_all_filtered_list = [[item for item in original_list if item != ''] for original_list in driver_results_all_text_split]
-    header_list = driver_results_all_filtered_list[0]
-    driver_results_all_filtered_list = driver_results_all_filtered_list[1:]
-    join_names = lambda arr: ' '.join(arr[2:4])
-    dr_res_all_modified_data = [[*arr[:2], join_names(arr), *arr[5:]] for arr in driver_results_all_filtered_list]
-    driver_results_all_df = pd.DataFrame(dr_res_all_modified_data, columns=header_list)
-    #logger.info(f"{driver_results_all_df = }")
-    
-    r1st = driver_results_all_df.loc[0]['Driver']
-    r2nd = driver_results_all_df.loc[1]['Driver']
-    r3rd = driver_results_all_df.loc[2]['Driver']
-    
-    r_botr = ""
+        ## common lists
+        best_three = ['Ferrari','Red Bull Racing Honda RBPT','Mercedes']
 
-    for (driver, team) in (zip(driver_results_all_df['Driver'], driver_results_all_df['Car'])):
-        if team not in ['Ferrari','Red Bull Racing Honda RBPT','Mercedes']:
-            r_botr = driver
-            logger.info(f"{r_botr = }")
-            break
+        ## urls
+        all_races_url = "https://www.formula1.com/en/results.html/2023/races.html"
+        prev_race_results_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/race-result.html"
+        prev_qual_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/qualifying.html"
+        prev_free_prac_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/practice-{free_prac_ser_num}.html"
+        prev_sprint_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/sprint-results.html"
+        prev_dotd_url = "https://www.formula1.com/en/latest/article.driver-of-the-day-2023.5wGE2ke3SFqQwabYVQXLnF.html"
+        prev_rf_url = "https://www.formula1.com/en/results.html/2023/fastest-laps.html"
 
-    r_dnf = 0
+        ## race types and scores
 
-    for state in driver_results_all_df['Time/Retired']:
-        if state in ['DNS','DNF']:
-            r_dnf += 1
+        fp1,fp2,fp3,q1st,q2nd,q3rd,q_botr,r1st,r2nd,r3rd,r_botr,dotd,r_fast,r_dnf = [0] * 14
+
+        scores_json = {
+            "FP1": fp1,
+            "FP2": fp2,
+            "FP3": fp3,
+            "Q1st": q1st,
+            "Q2nd": q2nd,
+            "Q3rd": q3rd,
+            "Q-BOTR": q_botr,
+            "R1st": r1st,
+            "R2nd": r2nd,
+            "R3rd": r3rd,
+            "R-BOTR": r_botr,
+            "DOTD": r_botr,
+            "R-F": r_fast,
+            "R-DNF": r_dnf
+            }
+
+        def __init__(self):
+            pass
+
+        def _request_and_get_soap(self,url) -> BeautifulSoup:
+            response = requests.get(url).text
+            soap = BeautifulSoup(response, 'html.parser')
+            return soap
+
+        def _join_names(self,start=2,end=4):
+            return lambda arr: ' '.join(arr[start:end])
+
+        def get_prev_race_id_and_name(self) -> None:
+            """updates local-class id and name"""
+            all_races_response = requests.get(self.all_races_url).text # ---------NEW FUNCTION
+            all_races_soup = BeautifulSoup(all_races_response, 'html.parser') # --  SECTION
+            all_races_names_data = all_races_soup.find_all('a', class_="dark bold ArchiveLink")
+            all_races_names = [name.get_text().strip() for name in all_races_names_data]
+            all_races_ids_data = all_races_soup.find_all('a', class_='ArchiveLink')
+            all_races_ids = [name.get('href') for name in all_races_ids_data]
+            all_races_ids_text = [name.split('/')[5] for name in all_races_ids]
+            previous_race_id = all_races_ids_text[-1]
+            previous_race_name = all_races_names[-1]
+            logger.info(f"{previous_race_id = }\n{previous_race_name = }")
+            F1DataFetcher.prev_race_id = previous_race_id
+            F1DataFetcher.prev_race_name = previous_race_name
+
+        def get_prev_race_results(self) -> None:
+            """ r1-3, r-botr, r-dnf results """
+            prev_race_response = requests.get(self.prev_race_results_url).text # ---NEW FUNCTION
+            prev_race_soap = BeautifulSoup(prev_race_response, 'html.parser') # ----  SECTION
+            """
+            columns = ['Race', 'Date', 'Driver', 'Team', 'Laps', 'Time']
+            data = []
+            rows = prev_race_soap.find_all('tr')
+            for row in rows:
+                cols = row.find_all(['td', 'a', 'span'])
+                if cols:
+                    cols = [col.get_text(strip=True) for col in cols]
+                    cols = list(filter(None, cols))
+                    data.append(cols)
+            df = pd.DataFrame(data, columns=columns)
+            df = df.transpose()     
+            df['Date'] = pd.to_datetime(df['Date'], format='%d %b %Y')
+            df['Laps'] = pd.to_numeric(df['Laps'], errors='coerce')
+            logger.info(f"prev_race_table: {df}")
+            """
+            prev_race_table = prev_race_soap.find_all('tr')
+            prev_race_table_text = [name.get_text().strip() for name in prev_race_table]
+            logger.info(f"{prev_race_table_text = }")
+            prev_race_table_text_clear = [name.split("\n") for name in prev_race_table_text]
+            logger.info(f"{prev_race_table_text_clear = }")
+            prev_race_table_filtered = [[item for item in original_list if item.strip() != ''] for original_list in prev_race_table_text_clear]
+            logger.info(f"{prev_race_table_filtered = }")
+            
+            prev_race_table_header = prev_race_table_filtered[0]
+            prev_race_table_filtered_values = prev_race_table_filtered[1:]
+            join_names = self._join_names()
+            prev_race_table_clean = [[*arr[:2], join_names(arr), *arr[5:]] for arr in prev_race_table_filtered_values]
+            logger.info(f"{prev_race_table_clean = }")
+            logger.info(f"{prev_race_table_header = }")
+            prev_race_table_df = pd.DataFrame(prev_race_table_clean, columns=prev_race_table_header)
+            
+            self.r1st = prev_race_table_df.loc[0]['Driver']
+            self.r2nd = prev_race_table_df.loc[1]['Driver']
+            self.r3rd = prev_race_table_df.loc[2]['Driver']
+
+            for (driver, team) in (zip(prev_race_table_df['Driver'], prev_race_table_df['Car'])):
+                if team not in self.best_three:
+                    self.r_botr = driver
+                    break
+
+            for state in prev_race_table_df['Time/Retired']:
+                if state in ['DNS','DNF']:
+                    self.r_dnf += 1
+
+
+    f1_data_fetcher = F1DataFetcher()
+    f1_data_fetcher.get_prev_race_id_and_name()
+    logger.info(f1_data_fetcher.prev_race_results_url)
+    f1_data_fetcher.get_prev_race_results()
+    logger.info(f"{f1_data_fetcher.r1st}")
+    return 0
 
     # find out QUALIFYING results in previous race
     previous_race_q_url = f"https://www.formula1.com/en/results.html/2023/races/{previous_race_id}/{previous_race_name}/qualifying.html"
@@ -406,6 +477,25 @@ async def eval(ctx):
     # 1. find all the users who guessed (if didnt, out of game)
     # 2. if more guesses under same race_type then latest matters.
     # 3. if didnt guess in a race_type then doesnt get points
+    # 4. assign score board value
+
+    # collect score board entries
+
+    with open(f'{SCORE_TABLE_PATH}score_table.json', 'r') as file1:
+        first_data = json.load(file1)
+
+    # Open and read the second JSON file
+    with open(f'{SCORE_TABLE_PUBLIC_PATH}score_table_public.json', 'r') as file2:
+        compare_data = json.load(file2)
+
+    # Update the values in the second dictionary
+    for key, value in compare_data.items():
+        first_data[key] = value
+    score_board = first_data
+    with open(f'{SCORE_TABLE_PATH}score_table.json', 'w') as file2:
+        json.dump(first_data, file2, indent=4)
+
+    #logger.info(f"SCORE_BOARD: {first_data}")
 
     # collect users
 
@@ -429,17 +519,12 @@ async def eval(ctx):
                 if guessed_race_type == race_type:
                     if guessed_driver_name == driver_name:
                         logger.info(f"{user}: match! {driver_name},{race_type}")
-                        await ctx.send(f"{user} guessed correct: {driver_name} | {race_type} - X points!")
+                        points = score_board[race_type]
+                        await ctx.send(f"{user} guessed correct: {driver_name} | {race_type} - {points} points!")
 
-@bot.command()
-async def rules(ctx):
-    rule_book = """
-Rules for guessing:
-1. find all the users who guessed (if didnt, out of game)
-2. if more guesses under same race_type then latest matters.
-3. if didnt guess in a race_type then doesnt get points
-"""
-    await ctx.send(rule_book)
+
+# update_odds func()
+
 
 @bot.command(aliases=["date,when,next"])
 async def setdate(ctx, *, date_input):
@@ -455,6 +540,47 @@ async def setdate(ctx, *, date_input):
             await ctx.send("Invalid date format. Please use a valid date format.")
     except Exception as e:
         await ctx.send(f"An error occurred: {str(e)}")
+
+#--------< Additional Functions >----#
+
+@bot.command()
+async def tutorial(ctx):
+    tutorial = """
+Start with setting the race event date - !setdate
+Then make guesses - !g(uess)
+Then wait until the event
+Finally evaluate the results - !e(val)
+
+(And start the whole process again)
+"""
+    await ctx.send()
+
+@bot.command()
+async def spy(ctx):
+    guilds = bot.guilds
+    guild = str(guilds).split("=")[1].split()[0]
+    guild = int(guild)
+    #guild = bot.get_guild(1078427611597906001)
+    logger.info(f"manual: {guild = }")
+
+    if guild:
+        for member in guild.members:
+            logger.info(f"{member.name}: <@{member.discriminator}>")
+            await ctx.send(f"{member.name}: <@{member.id}>")
+    else:
+        logger.info("Guild not found")
+
+
+@bot.command()
+async def rules(ctx):
+    rule_book = """
+Rules for guessing:
+1. find all the users who guessed (if didnt, out of game)
+2. if more guesses under same race_type then latest matters.
+3. if didnt guess in a race_type then doesnt get points
+"""
+    await ctx.send(rule_book)
+
 
 @bot.command()
 async def getlogs(ctx, num_of_lines=500):
@@ -513,7 +639,7 @@ async def last_results(ctx,prev=0):
     #await ctx.send(results.iloc[:,[1,8,15]].to_string(index=False))
 
 
-## For fun
+#--------< Funny Functions >----#
 
 @bot.command()
 async def play_music(ctx):
@@ -616,7 +742,8 @@ async def shutdown(ctx):
 
 """
 
-# Main function
+#----< Main Function Init >----#
+
 
 if __name__ == "__main__":
     pass
