@@ -6,4 +6,6 @@
 todo:
 
 - the bot should run automates tests every first bootup of the day:
-- check databases, requests, connection, modules, dependencies
+  - check databases, requests, connection, modules, dependencies
+
+- maybe move to YAML files
