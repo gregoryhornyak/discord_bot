@@ -53,17 +53,23 @@ Add the bot to your friends / join the group which involves it
 
 IF you want to make a guess:
 
-`!guess event score`
+`!guess`
 
-> the event is the name of the event, score is a number.
+> or `!g` for shorter
 
-e.g. `!guess Top1 Verstappen` produces a guess of Verstappen being in the Top1.
+Fill in the table with your guesses
 
-OR:
+Then wait until the race event
 
-`!guess2`
+> the bot will notify you
 
-> this is a UI test
+Then evaluate your scores using
+
+`!evaluate`
+
+> `!e` for short
+
+Retrieve the results in a score board
 
 ---
 
