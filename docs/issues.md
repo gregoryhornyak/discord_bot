@@ -12,3 +12,7 @@ todo:
 
 - use a daily database fetches every morning
   - so no need for fetching time, quick access, local data
+
+- alarm should a activate:
+  - morning fetching,
+  - race within time boundary (eg. 3 days)
