@@ -89,7 +89,7 @@ The repository uses **python venv**, which needs to be initialised beforehand, a
 
 A brief tutorial on setup is available [here](docs/setup.md).
 
-## Mayor Update 1
+### Mayor Update 1
 
 **Formula One Discord Bot** is moving away from FastF1 Python package:
 
@@ -98,7 +98,7 @@ A brief tutorial on setup is available [here](docs/setup.md).
 
 In the future, the Formula One Discord Bot is going to use Ergast as main information source for Race, Qualification, Finishing Status and Race schedules
 
-#Mayor Update 2
+### Mayor Update 2
 
 **Formula One Discord Bot** is not going to use Ergast as primary API, because Ergast API is going to be deprecated in 2024.
 
@@ -117,7 +117,7 @@ The request_manager, handling the requests to Formula One official website.
 
 ~~logging machine~~
 
-~~The F1-API - a python package - fetching the F1 race data.~~
+~~FastF1, a F1-API - a python package - fetching the F1 race data.~~
 
 Formula One website as source
 
