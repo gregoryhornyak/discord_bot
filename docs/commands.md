@@ -4,7 +4,7 @@
 
 **every command should start with '/'**
 
-`guess`: to make a guess (menu)
+`guess`: to make a guess (menu) and save it
 
 `myguess`: to see your guesses for the current event (png)
 

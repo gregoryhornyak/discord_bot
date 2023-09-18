@@ -1,22 +1,26 @@
 # Formula One Discord Bot
 
-![Version](https://img.shields.io/badge/version-0.3-green) ![Deps](https://img.shields.io/badge/dependencies-up_to_date-green) ![Python](https://img.shields.io/badge/python-3.10-yellow) ![build](https://img.shields.io/badge/build-passing-yellow) ![build](https://img.shields.io/badge/code_coverage-0-red)
+#### Automated bot for a Discord server
+
+![Version](https://img.shields.io/badge/version-0.4.8-green) ![Deps](https://img.shields.io/badge/dependencies-up_to_date-green) ![Python](https://img.shields.io/badge/python-3.10-yellow) ![build](https://img.shields.io/badge/build-passing-yellow) ![build](https://img.shields.io/badge/progress-69%-yellow)
 
 
-### Automated bot for a Discord server
 
-*1) guess method*
+---
+
+## Functionality
+
+### Guess method
 
 ![screenshot from Discord](docs/images/screenShot_guess.png)
 
-*2) showlast method*
-
-![screenshot from Discord](docs/images/screenShot_showlast2.png)
-
-*3) last_results method (returns a png)*
+### Myguess method (returns a png)
 
 ![screenshot from Discord](docs/images/screenShot_last_results.png)
 
+### Setdate method
+
+### Evaluate method
 
 ---
 
