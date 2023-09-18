@@ -9,3 +9,6 @@ todo:
   - check databases, requests, connection, modules, dependencies
 
 - maybe move to YAML files
+
+- use a daily database fetches every morning
+  - so no need for fetching time, quick access, local data
