@@ -4,43 +4,17 @@
 
 import discord
 from discord.ext import commands, tasks
+
 import datetime
 import os
-import requests
-from bs4 import BeautifulSoup
-import json
+
+from include.logging_manager import logger
+from include.constants import *
+from include.f1_data_fetcher import *
+from include.database_manager import *
+
 import asyncio
 from dateutil.parser import parse
-from include.request_manager import f1_results_pipeline,get_drivers_info,pd,logger,LOGS_PATH,get_prev_race_id
-
-#----< Constants >----#
-
-UPCOMING_DATE_PATH = "resources/data/"
-SCORE_TABLE_PATH = "resources/data/"
-TOKEN_PATH = "resources/token/"
-PASSW_PATH = "resources/passw/"
-UPLOADS_PATH = "resources/uploads/"
-GUESS_FILE = "resources/data/"
-SCORES_FILE = "resources/scores/"
-USER_SCORES = "resources/data/"
-
-MANIFEST_PATH = "docs/manifest/"
-SCORE_TABLE_PUBLIC_PATH = "docs/"
-
-
-F1_RACES = ["FP1","FP2","FP3",
-            "Q1st","Q2nd","Q3rd","Q-BOTR",
-            "R1st","R2nd","R3rd","R-BOTR",
-            "R-DOTD","R-F","R-DNF"]
-
-CHANNEL_ID = 1078427611597906004
-
-# USE JSON
-## AND
-# PANDAS DATAFRAMES
-
-#----< Logger init >----#
-
 
 
 #----< Working directory >----#
@@ -63,12 +37,14 @@ async def on_ready():
     channel_id = bot.get_channel(CHANNEL_ID)
     with open(f"{MANIFEST_PATH}manifest.json",'r') as f:
         manifest_info = json.load(f)
+
     boot_message = f"""
-    {manifest_info['bot_name']} v{manifest_info['version']}
+{manifest_info['bot_name']} v{manifest_info['version']}
 is running in {channel_id.name} channel
 Boot start: {datetime.datetime.now()}
 Created by {manifest_info['developer']}
 """
+
     await channel_id.send(boot_message,delete_after=5)
 
     # create resources directory and subdirectories
@@ -85,28 +61,39 @@ Created by {manifest_info['developer']}
 
 async def schedule_daily_message():
     loop_counter = 0
+    upcoming_date = ""
     while True:
         channel = bot.get_channel(CHANNEL_ID)
         try:
             with open(f"{UPCOMING_DATE_PATH}upcoming_date", "r") as f:
                 upcoming_date = f.readline()
                 upcoming_date = parse(upcoming_date)
-            logger.info(f"Date already set for: {upcoming_date}")
+            logger.info(f"Date once set for: {upcoming_date}")
         except FileNotFoundError:
             logger.info("Not found")
+            # do something
 
         now = datetime.datetime.now()
+        # race alert
+        #   less than a day
+        if now.day <= upcoming_date.day:
+            logger.info(f"Past race date")
         if now.day+1 >= upcoming_date.day:
             logger.info(f"date is tomorrow!")
             await channel.send("@everyone the race is due!",delete_after=3)
+        #   less than 3 days
         elif now.day+3 >= upcoming_date.day:
             logger.info(f"3 days until race!")
             await channel.send("@everyone 3 days until the race!",delete_after=3)
-        #then = now.replace(minute=21)
-        #wait_time = (then-now).total_seconds()
+        
+        # morning schedule: auto-testing, fetching
+        if now.hour == 8 and now.minute == 5: # 8:05
+            await channel.send("Doing daily routine",delete_after=3)
+        if now.hour == 21 and now.minute == 42: # 8:05
+            await channel.send("Doing daily routine")
         loop_counter += 1
-        logger.info(f"{loop_counter = }")
-        await asyncio.sleep(300)
+        #logger.info(f"{loop_counter = }")
+        await asyncio.sleep(50)
 
 #--------< Core Command Functions >----#
 
@@ -120,9 +107,18 @@ async def upgrade(ctx,password):
         await ctx.send("Wrong password")
         return 0
     logger.info("BOT SHUTDOWN")
+    await ctx.send("Bot is shutting down and will be upgraded...")
     await bot.close()
 
 # function to get every racing date -> save to file -> update alert 
+
+def get_discord_members(bot:commands.Bot) -> dict:
+    user_info = {}
+    for guild in bot.guilds:
+        for member in guild.members:
+            if member.name != "lord_maldonado":
+                user_info[member] = member.discriminator
+    return user_info
 
 @bot.command(aliases=["g","makeguess"])
 async def guess(ctx):
@@ -131,12 +127,17 @@ async def guess(ctx):
 
     # save the data into a file, to avoid long fetching
     drivers_info = get_drivers_info()
+    #prev_race_id = get_prev_race_id_and_name()['id']
+    #prev_race_name = get_prev_race_id_and_name()['name']
+    next_race_id = get_next_race_id_and_name()['id']
+    next_race_name = get_next_race_id_and_name()['name']
 
     select_race = discord.ui.Select(placeholder="Choose a race!",
-                                    options=[discord.SelectOption(label=race_name, description="NONE") for race_name in F1_RACES])
+                                    options=[discord.SelectOption(
+                                        label=race_name, description="---") for race_name in F1_RACE_TYPES])
     select_driver = discord.ui.Select(placeholder="Choose a driver",
-                                      options=[discord.SelectOption(label=str(driver[0][0]+" "+driver[0][1]),
-                                                                    description=driver[1]) for driver in drivers_info])
+                                      options=[discord.SelectOption(
+                                          label=driver,description=team) for driver,team in drivers_info.items()])
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
     theView = discord.ui.View()
     theView.add_item(select_race)
@@ -150,36 +151,15 @@ async def guess(ctx):
         await interaction.response.send_message("")
 
     async def button_callback(interaction):
-        guesses_database = {}
-        logger.info(f"{ctx.author.name},{select_race.values[0]},{select_driver.values[0]}")
-        data = {
-            "user_name": ctx.author.name,
-            "user_id": str(ctx.author.id),
-            "race_type": select_race.values[0],
-            "driver_name": select_driver.values[0]
-            }
         
-        try:
-            with open(f"{GUESS_FILE}guess_db.json", "r") as f:
-                guesses_database = json.load(f)
-        except FileNotFoundError:
-            logger.error("No guess_db found")
-        except json.decoder.JSONDecodeError:
-            logger.info("Empty json file")
-        finally:
-            present = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")
-            guesses_database[present] = data
-            logger.info("Guess_db updated")
-            with open(f"{GUESS_FILE}guess_db.json", "w") as f:
-                    json.dump(guesses_database, f, indent=4)
-            logger.info("Guess saved")
-        # ?indent or not?
-            await interaction.response.send_message("You have submitted your guess!")
+        save_guess(ctx,select_race,select_driver,next_race_id)
+        await interaction.response.send_message("You have submitted your guess!")
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
     press_button.callback = button_callback
-    await ctx.send("Choose driver and race type\n**(use this form for multiple guesses)**", view=theView)
+    message = f"Choose driver and race type\nfor {next_race_name} {datetime.datetime.now().year}\n**(use this form for multiple guesses)**"
+    await ctx.send(message, view=theView)
 
 schedule_2023 = "https://www.formula1.com/en/latest/article.formula-1-update-on-the-2023-calendar.4pTQzihtKTiegogmNX5XrP.html"
 
@@ -201,6 +181,10 @@ async def eval(ctx):
     """read the results, and compare them with the guesses
     could only happen after the race"""
 
+    # FETCHING
+
+    # save dataframes into data/fetched_data every morning
+
     # headers: | Pos No Driver Car Laps Time/Retired PTS
     await ctx.send("Fetching has begun... may take a while")
 
@@ -210,7 +194,8 @@ async def eval(ctx):
 
     #await ctx.send(file=discord.File(UPLOADS_PATH+"verstappen.mp3"))
 
-    # evaluating method / system:
+    # EVALUATING
+
     # 1. find all the users who guessed (if didnt, out of game)
     # 2. if more guesses under same race_type then latest matters.
     # 3. if didnt guess in a race_type then doesnt get points
@@ -219,25 +204,14 @@ async def eval(ctx):
     # collect score board entries
 
     with open(f'{SCORE_TABLE_PATH}score_table.json', 'r') as file1:
-        first_data = json.load(file1)
-
-    # Open and read the second JSON file
-    with open(f'{SCORE_TABLE_PUBLIC_PATH}score_table_public.json', 'r') as file2:
-        compare_data = json.load(file2)
-
-    # Update the values in the second dictionary
-    for key, value in compare_data.items():
-        first_data[key] = value
-    score_board = first_data
-    with open(f'{SCORE_TABLE_PATH}score_table.json', 'w') as file2:
-        json.dump(first_data, file2, indent=4)
+        score_board = json.load(file1)
 
     #logger.info(f"SCORE_BOARD: {first_data}")
 
     # collect users
 
     #user_guesses = pd.read_json(f"{GUESS_FILE}guess_db.json")
-    with open(f"{GUESS_FILE}guess_db.json", "r") as f:
+    with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
                 guesses_database = json.load(f)
     user_guesses = pd.DataFrame.from_dict(guesses_database, orient='index')
     user_guesses.reset_index(inplace=True)
@@ -248,7 +222,7 @@ async def eval(ctx):
 
     user_guesses_db = {}
     try:
-        with open(f"{USER_SCORES}user_scores.json", "r") as f:
+        with open(f"{INVENTORY_PATH}users_db.json", "r") as f:
             user_guesses_db = json.load(f)
     except FileNotFoundError:
         logger.error("No guess_db found")
@@ -265,25 +239,34 @@ async def eval(ctx):
         if user not in users_recorded:
             logger.info(f"Welcome {user}")
             user_guesses_db[user_id] = {"user_name": user,
-                                        "round_score": {
-                                            "round_id": {
-                                                "FP1": 0,
-                                                "FP2": 0,
-                                                "FP3": 0,
-                                                "Q1st": 0,
-                                                "Q2nd": 0,
-                                                "Q3rd": 0,
-                                                "Q-BOTR": 0,
-                                                "R1st": 0,
-                                                "R2nd": 0,
-                                                "R3rd": 0,
-                                                "R-BOTR": 0,
-                                                "DOTD": 0,
-                                                "R-F": 0,
-                                                "R-DNF": 0,
-                                                "round_total_score": 0,
+                                        "round_score": 
+                                        {
+                                            "round_id": 
+                                            {
+                                                "date": "DATE",
+                                                "location": "COUNTRY",
+                                                "score_board":
+                                                {
+                                                    "FP1": 0,
+                                                    "FP2": 0,
+                                                    "FP3": 0,
+                                                    "Q1ST": 0,
+                                                    "Q2ND": 0,
+                                                    "Q3RD": 0,
+                                                    "Q-BOTR": 0,
+                                                    "R1ST": 0,
+                                                    "R2ND": 0,
+                                                    "R3RD": 0,
+                                                    "R-BOTR": 0,
+                                                    "DOTD": 0,
+                                                    "R-FAST": 0,
+                                                    "R-DNF": 0,
                                                 },
-                                                },"total_score": 0}
+                                                "round_total_points": 0,
+                                            },
+                                        },
+                                        "total_score": 0
+                                        }
 
     with open(f"{USER_SCORES}user_scores.json", "w") as f:
         json.dump(user_guesses_db, f, indent=4)
@@ -415,7 +398,7 @@ async def getlogs(ctx, num_of_lines=500):
 
 @bot.command(aliases=['myguess','mylast'])
 async def myguesses(ctx):
-    with open(f"{GUESS_FILE}guess_db.json", "r") as f:
+    with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
             guesses_database = json.load(f)
     user_guesses = pd.DataFrame.from_dict(guesses_database, orient='index')
     user_guesses.reset_index(inplace=True)
@@ -429,7 +412,7 @@ async def myguesses(ctx):
     cur_user_unique = cur_user_unique.sort_values(by='race_type')
     logger.info(cur_user_unique)
     with open(f"{UPLOADS_PATH}user_guesses_list.md",'w') as f:
-        f.write(f"# {'&nbsp;'*11} {ctx.author.name}'s guess list\n")
+        f.write(f"# {'&nbsp;'*11} {ctx.author.name}'s guesses\n")
         f.write(cur_user_unique['driver_name'].to_markdown())
     cmd = f'pandoc {UPLOADS_PATH}user_guesses_list.md -o {UPLOADS_PATH}user_guesses_list.pdf'
     cmd2 = f'pdftoppm {UPLOADS_PATH}user_guesses_list.pdf {UPLOADS_PATH}user_guesses_list -png'
@@ -529,18 +512,6 @@ async def predict(ctx):
 async def vitya(ctx):
     await ctx.send(file=discord.File(UPLOADS_PATH+"vitya.png"))
 
-"""
-Functions not in use:
-
-@bot.command()#(aliases=["quit"])
-@commands.has_permissions(administrator=True)
-async def shutdown(ctx):
-    await ctx.send("Bot will shutdown in 1sec")
-    logger.debug("Bot Closed")
-    await bot.close()
-
-
-"""
 
 #----< Main Function Init >----#
 
