@@ -2,3 +2,8 @@
 2. needed a core.py, and the basic_bot.py would use the core.py to create a bot object
 3. Ergast gave up
 4. FastF1 is a bunch of crap
+
+todo:
+
+- the bot should run automates tests every first bootup of the day:
+- check databases, requests, connection, modules, dependencies
