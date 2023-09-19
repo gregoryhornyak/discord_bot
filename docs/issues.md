@@ -22,7 +22,7 @@ add new Updates Page for any upcoming update
 update 1: 
 
 ```mermaid
-stateDiagram
+graph TD
 
     [*] --> Ver0.1
     Ver0.1 --> Ver0.3
