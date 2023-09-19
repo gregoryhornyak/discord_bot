@@ -1,7 +1,7 @@
 import json
 
 UPCOMING_DATE_PATH = "resources/data/"
-SCORE_TABLE_PATH = "resources/data/"
+RESULTS_PATH = "resources/data/"
 TOKEN_PATH = "resources/token/"
 PASSW_PATH = "resources/passw/"
 UPLOADS_PATH = "resources/uploads/"

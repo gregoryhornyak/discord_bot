@@ -9,7 +9,7 @@ def create_single_user_db(user_id,user_name):
         return {
             "user_name": _user_name,
             "round_score": {},
-            "total_score": 0
+            "total_points": 0
         }
     try:
         with open(f"{INVENTORY_PATH}users_db.json","r") as f:

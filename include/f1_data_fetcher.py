@@ -15,7 +15,7 @@ class F1DataFetcher:
     free_prac_ser_num = 1
 
     ## common lists
-    best_three = ['Ferrari','Red Bull Racing Honda RBPT','Mercedes']
+    best_three = ['FERRARI','RED BULL RACING HONDA RBPT','MERCEDES'] # refine, as it doesnt work
 
     ## urls
     all_races_url = "https://www.formula1.com/en/results.html/2023/races.html"
@@ -47,7 +47,8 @@ class F1DataFetcher:
         }
 
     def __init__(self):
-        pass
+        self.cache_results() # and save them
+        logger.info("updated urls, also prev and next race info")
 
     def _update_urls(self) -> None:
         prev_race_id = F1DataFetcher.prev_race_id
@@ -103,7 +104,7 @@ class F1DataFetcher:
         all_races_names_divided = {race.split('/')[0]: process_race_name(race.split('/')[1]) for race in all_races_names}
         next_key = None
         for key in sorted(all_races_names_divided.keys()):
-            if key > F1DataFetcher.prev_race_id:
+            if key > str(F1DataFetcher.prev_race_id):
                 next_key = key
                 break
 
@@ -249,6 +250,22 @@ class F1DataFetcher:
         drivers_fullname = [fname+" "+sname for fname, sname in zip(drivers_firstnames,drivers_surnames)]
         drivers_info = {key: value for key, value in zip(drivers_fullname,cars)}
         return drivers_info
+
+    def cache_results(self):
+        self.get_prev_race_id_and_name() # first | MUST DO
+        self.get_next_race_id_and_name() 
+        self.update_url() # second | MUST DO
+        self.get_prev_race_results()
+        self.get_prev_sprint_results()
+        self.get_prev_fastest_results()
+        self.get_prev_dotd_results()
+        for event in range(1,4):
+            self.get_prev_fpX_results(event)
+        self.get_prev_qual_results()
+        results_json = {F1DataFetcher.prev_race_id: F1DataFetcher.score_board}
+        with open(f"{RESULTS_PATH}results.json","w") as f:
+            json.dump(results_json,f,indent=4)
+            
 
 def f1_results_pipeline():
     f1_data_fetcher = F1DataFetcher()

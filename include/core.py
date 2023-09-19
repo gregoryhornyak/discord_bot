@@ -3,7 +3,7 @@
 #----< Imports >----#
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 
 import datetime
 import os
@@ -76,6 +76,7 @@ async def schedule_daily_message():
         now = datetime.datetime.now()
         # race alert
         #   less than a day
+        """
         if now.day <= upcoming_date.day:
             logger.info(f"Past race date")
         if now.day+1 >= upcoming_date.day:
@@ -85,7 +86,7 @@ async def schedule_daily_message():
         elif now.day+3 >= upcoming_date.day:
             logger.info(f"3 days until race!")
             await channel.send("@everyone 3 days until the race!",delete_after=3)
-        
+        """
         # morning schedule: auto-testing, fetching
         if now.hour == 8 and now.minute == 5: # 8:05
             await channel.send("Doing daily routine",delete_after=3)
@@ -112,12 +113,12 @@ async def upgrade(ctx,password):
 
 # function to get every racing date -> save to file -> update alert 
 
-def get_discord_members(bot:commands.Bot) -> dict:
-    user_info = {}
+def get_discord_members(bot:commands.Bot):
+    user_info = []
     for guild in bot.guilds:
         for member in guild.members:
             if member.name != "lord_maldonado":
-                user_info[member] = member.discriminator
+                user_info.append({member.name: member.id})
     return user_info
 
 @bot.command(aliases=["g","makeguess"])
@@ -190,7 +191,7 @@ async def eval(ctx):
 
     scores_json = f1_results_pipeline()
     logger.info(f"scores_json: {scores_json}")
-    await ctx.send(scores_json,delete_after=4)
+    await ctx.send(scores_json,delete_after=3)
 
     #await ctx.send(file=discord.File(UPLOADS_PATH+"verstappen.mp3"))
 
@@ -201,118 +202,71 @@ async def eval(ctx):
     # 3. if didnt guess in a race_type then doesnt get points
     # 4. assign score board value
 
-    # collect score board entries
+    # files needed:
+    # - guess_db
+    # - results
+    # - score_table
+    # - users_db
+    # - F1-data
+    # - all users
 
-    with open(f'{SCORE_TABLE_PATH}score_table.json', 'r') as file1:
-        score_board = json.load(file1)
+    # guess_db - users' guesses on race results
 
-    #logger.info(f"SCORE_BOARD: {first_data}")
+    with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
+        guess_db = json.load(f)
+    # does it need to be transformed into a dataframe?
+    guess_db = pd.DataFrame.from_dict(guess_db, orient='index')
+    guess_db.reset_index(inplace=True)
+    guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
+    guess_db_reversed = guess_db.iloc[::-1]
+    logger.info(f"{guess_db_reversed = }")
+
+    # results - official results
+
+    with open(f"{RESULTS_PATH}results.json", "r") as f:
+        results = json.load(f)
+
+    # collect score table entries
+
+    with open(f'{SCORE_TABLE_PATH}score_table.json', 'r') as f:
+        scoring_board = json.load(f)
+
+    # users_db
+
+    with open(f'{INVENTORY_PATH}users_db.json', 'r') as f:
+        users_db = json.load(f)
+
+    # f1 data
+
+    f1_data_fetcher = F1DataFetcher()
+    race_id = f1_data_fetcher.prev_race_id
 
     # collect users
 
-    #user_guesses = pd.read_json(f"{GUESS_FILE}guess_db.json")
-    with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
-                guesses_database = json.load(f)
-    user_guesses = pd.DataFrame.from_dict(guesses_database, orient='index')
-    user_guesses.reset_index(inplace=True)
-    user_guesses.rename(columns={'index': 'time_stamp'}, inplace=True)
-    user_guesses_reversed = user_guesses.iloc[::-1]
-    logger.info(f"{user_guesses_reversed = }")
-    # appropriate table ready
+    members = get_discord_members(bot)
+    logger.info(f"{members = }")
 
-    user_guesses_db = {}
-    try:
-        with open(f"{INVENTORY_PATH}users_db.json", "r") as f:
-            user_guesses_db = json.load(f)
-    except FileNotFoundError:
-        logger.error("No guess_db found")
-    except json.decoder.JSONDecodeError:
-        logger.info("Empty json file")
+    # --- all resources are collected
 
-    users_in_game = user_guesses[['user_name', 'user_id']].drop_duplicates() 
-    logger.info(f"{users_in_game = }")
-    users_recorded = [name["user_name"] for name in user_guesses_db.values()]
+    ## ready for evaluation  
 
-    
-
-    for (user, user_id) in (zip(users_in_game['user_name'], users_in_game['user_id'])):
-        if user not in users_recorded:
-            logger.info(f"Welcome {user}")
-            user_guesses_db[user_id] = {"user_name": user,
-                                        "round_score": 
-                                        {
-                                            "round_id": 
-                                            {
-                                                "date": "DATE",
-                                                "location": "COUNTRY",
-                                                "score_board":
-                                                {
-                                                    "FP1": 0,
-                                                    "FP2": 0,
-                                                    "FP3": 0,
-                                                    "Q1ST": 0,
-                                                    "Q2ND": 0,
-                                                    "Q3RD": 0,
-                                                    "Q-BOTR": 0,
-                                                    "R1ST": 0,
-                                                    "R2ND": 0,
-                                                    "R3RD": 0,
-                                                    "R-BOTR": 0,
-                                                    "DOTD": 0,
-                                                    "R-FAST": 0,
-                                                    "R-DNF": 0,
-                                                },
-                                                "round_total_points": 0,
-                                            },
-                                        },
-                                        "total_score": 0
-                                        }
-
-    with open(f"{USER_SCORES}user_scores.json", "w") as f:
-        json.dump(user_guesses_db, f, indent=4)
-
-    """
-    "754392665919062058": {
-        "user_name": "GregHornyak",
-        "round_score": {
-            "round_id": "score",
-            "1218": 9,
-            "1219": 84
-        },
-        "total_score": 376
-    },
-    """        
-
-    for (user, user_id) in (zip(users_in_game['user_name'], users_in_game['user_id'])):
-        cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user]
-        cur_user_unique = cur_user.drop_duplicates(subset=['race_type'])
-        for (guessed_race_type, guessed_driver_name) in (zip(cur_user_unique['race_type'], cur_user_unique['driver_name'])):
-            for race_type,driver_name in scores_json.items():
-                for user_details in user_guesses_db.values():
+    # for every user
+    for user_details in members:
+        for user_name, user_id in user_details.items():
+            user_guesses = guess_db_reversed[guess_db_reversed['user_name'] == user_name]
+            user_guesses_unique = user_guesses.drop_duplicates(subset=['race_type'])
+            # for every guess
+            for (guessed_race_type, guessed_driver_name) in (zip(user_guesses_unique['race_type'], user_guesses_unique['driver_name'])):
+                # for every race_type's result
+                for race_type,driver_name in scores_json.items():
                     if guessed_race_type == race_type:
                         if guessed_driver_name == driver_name:
-                            if user_details["user_name"] == user: # match by name -> change to id-matching
-                                #logger.info(f"{user}: match! {driver_name},{race_type}")
-                                points = score_board[race_type]
-                                await ctx.send(f"{user} guessed correct: {driver_name} | {race_type} - {points} points!")
-                                # USER_ID {
-                                #   "round_score": {
-                                #     "round_id": "score"
-                                try:
-                                    test = user_guesses_db[str(user_id)]["round_score"][str(get_prev_race_id())]
-                                    logger.info(f"{test = }")
-                                except KeyError:
-                                    user_guesses_db[str(user_id)]["round_score"][str(get_prev_race_id())] = points
-                                else:
-                                    logger.info(f"{user} already evaluated")
-                                finally:
-                                    user_guesses_db[str(user_id)]["total_score"] += points
-                                    logger.info(f"{user} total score: {user_details['total_score']}")
+                            logger.info(f"{user_name}: match! {driver_name},{race_type}")
+                            point = scoring_board[race_type] # each race_type's score
+                            await ctx.send(f"{user_name} guessed correct: {driver_name} | {race_type} - {point} points!")
+                            #if round_score not empty:
+                            users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][race_type] = driver_name # if not DNF
                             
-    with open(f"{USER_SCORES}user_scores.json", "w") as f:
-        json.dump(user_guesses_db, f, indent=4)
-
-# update_odds func()
 
 @bot.command(aliases=["date,when,next"])
 async def setdate(ctx, *, date_input):
@@ -411,8 +365,9 @@ async def myguesses(ctx):
     cur_user_unique.set_index('race_type', inplace=True)
     cur_user_unique = cur_user_unique.sort_values(by='race_type')
     logger.info(cur_user_unique)
+    race_name = get_next_race_id_and_name()["name"]
     with open(f"{UPLOADS_PATH}user_guesses_list.md",'w') as f:
-        f.write(f"# {'&nbsp;'*11} {ctx.author.name}'s guesses\n")
+        f.write(f"### {'&nbsp;'*11} {ctx.author.name}'s guesses for {race_name} {datetime.datetime.now().year}\n")
         f.write(cur_user_unique['driver_name'].to_markdown())
     cmd = f'pandoc {UPLOADS_PATH}user_guesses_list.md -o {UPLOADS_PATH}user_guesses_list.pdf'
     cmd2 = f'pdftoppm {UPLOADS_PATH}user_guesses_list.pdf {UPLOADS_PATH}user_guesses_list -png'
