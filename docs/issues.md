@@ -24,7 +24,7 @@ update 1:
 ```mermaid
 stateDiagram
 
-[*] --> Ver0.1
-Ver0.1 --> Ver0.3
+    [*] --> Ver0.1
+    Ver0.1 --> Ver0.3
 
 ```
