@@ -18,3 +18,13 @@ todo:
   - race within time boundary (eg. 3 days)
 
 add new Updates Page for any upcoming update
+
+update 1: 
+
+```mermaid
+stateDiagram
+
+[*] --> Ver0.1
+Ver0.1 --> Ver0.3
+
+```
