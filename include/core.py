@@ -391,7 +391,7 @@ async def play_music(ctx):
     await ctx.send('**Now playing:** {}'.format(player.title))
 
 @bot.command()
-async def dako(ctx, length):
+async def dako(ctx, length=6):
 
     mid = "="
     mid += "="*int(length)
@@ -401,6 +401,11 @@ async def dako(ctx, length):
     else:
         await ctx.send(f'ekkora dakoval hogy tudsz te létezni?')
         logger.info("could not send huge dong")
+
+@bot.command()
+async def pina(ctx, length=0):
+    mid = ''
+    await ctx.send(f"itt egy szép pina csak neked:\n({mid})")
 
 @bot.command()
 async def whoami(ctx):
