@@ -23,8 +23,7 @@ update 1:
 
 ```mermaid
 graph TD
-
-    [*] --> Ver0.1
-    Ver0.1 --> Ver0.3
+    A --> B;
+    B --> C;
 
 ```
