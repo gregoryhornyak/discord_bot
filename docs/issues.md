@@ -16,3 +16,5 @@ todo:
 - alarm should a activate:
   - morning fetching,
   - race within time boundary (eg. 3 days)
+
+add new Updates Page for any upcoming update
