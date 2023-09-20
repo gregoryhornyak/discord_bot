@@ -1,5 +1,6 @@
 {
     "bot_name": "Formula One Discord Bot",
     "version": "0.4.4 ALPHA",
-    "developer": "Gergely Hornyak"
+    "developer": "Gergely Hornyak",
+    "latest": "/ commands"
 }

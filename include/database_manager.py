@@ -27,18 +27,30 @@ def create_single_user_db(user_id,user_name):
         with open(f"{INVENTORY_PATH}users_db.json","w") as f:
             json.dump(users_db,f,indent=4)
 
-def save_guess(ctx,select_race,select_driver,next_race_id):
+def save_guess(name,id,select_race,select_driver,next_race_id,dnf=False):
     guess_db = {}
     present = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")
-    def populate_json(_ctx=ctx,_select_race=select_race,_select_driver=select_driver,_next_race_id=next_race_id):
-        return {
-            "user_name": _ctx.author.name,
-            "user_id": str(_ctx.author.id),
+    def populate_json(_name=name,_id=id,_select_race=select_race,_select_driver=select_driver,_next_race_id=next_race_id,_dnf=dnf):
+        if _dnf:
+            return {
+            "user_name": _name,
+            "user_id": str(_id),
+            "race_id": _next_race_id,
+            "race_type": _select_race,
+            "number": str(_select_driver)
+        }
+        else:
+            return {
+            "user_name": _name,
+            "user_id": str(_id),
             "race_id": _next_race_id,
             "race_type": _select_race.values[0],
             "driver_name": _select_driver.values[0]
         }
-    logger.info(f"{ctx.author.name},{select_race.values[0]},{select_driver.values[0]}")
+    if dnf:
+        logger.info(f"{name},{select_race},{select_driver}")
+    else:
+        logger.info(f"{name},{select_race.values[0]},{select_driver.values[0]}")
 
     try:
         with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
@@ -57,4 +69,20 @@ def save_guess(ctx,select_race,select_driver,next_race_id):
         with open(f"{INVENTORY_PATH}guess_db.json", "w") as f:
             json.dump(guess_db, f, indent=4)
         logger.info("Guess saved")
+        
+def check_load_json(path):
+    try:
+        with open(path, "r") as f:
+            json_file = json.load(f)
+    except FileNotFoundError:
+        logger.error(f"{path}: Missing File")
+        with open(path, "w") as f:
+            json.dump(f,{},indent=4)
+    except json.decoder.JSONDecodeError:
+        logger.error(f"{path}: Empty Json File")
+        # populate file with JSON data
+    else:
+        return json_file
+    finally:
+        return False
         
