@@ -51,9 +51,9 @@ async def on_ready():
         manifest_info = json.load(f)
 
     boot_message = f"""
-{manifest_info['bot_name']} v{man_version}
+{manifest_info['bot_name']} v{manifest_info['version']}
 is running in {channel.name} channel
-Latest update: {manifest_info['latest']}
+Latest update: {man_version['latest']}
 Boot start: {datetime.datetime.now()}
 """
     await channel.send(boot_message,delete_after=10)
@@ -116,12 +116,12 @@ async def schedule_daily_message():
             await channel.send("@everyone 3 days until the race!",delete_after=3)
         """
         # morning schedule: auto-testing, fetching
-        if now.hour == 8 and now.minute == 5: # 8:05
-            await channel.send("Doing daily routine",delete_after=3)
+        if now.hour == 9 and now.minute == 5: # 8:05
+            await channel.send("Doing daily routine")
         if now.hour == 21 and now.minute == 45: 
             await channel.send("21:45")
         loop_counter += 1
-        await asyncio.sleep(300)
+        await asyncio.sleep(50)
 
 @bot.tree.command(name="upgrade",description="long")
 async def upgrade(interaction:Interaction,password:str):
@@ -491,7 +491,6 @@ async def play(ctx:Interaction,person:typing.Literal["lajos","hosszulajos","vity
     }
 
     source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(song_list[person]))
-    await ctx.guild.voice_client.connect(timeout=2.1,reconnect=True)
     ctx.guild.voice_client.play(source)
     await ctx.response.send_message(f"{person}-t hallhatjuk",ephemeral=True)
     
