@@ -49,6 +49,15 @@ class F1DataFetcher:
 
     def __init__(self):
         fetch_info = {}
+        res_temp = {}
+        missing_results_json = False
+        try:
+            with open(f"{RESULTS_PATH}results.json","r") as f:
+                res_temp = json.load(f)
+        except FileNotFoundError:
+            missing_results_json = True
+            logger.info("missing results.json file")
+
         try:
             with open(f"{RESULTS_PATH}fetching_log.json","r") as f:
                 fetch_info = json.load(f)
@@ -57,9 +66,9 @@ class F1DataFetcher:
             fetch_info['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             with open(f"{RESULTS_PATH}fetching_log.json","w") as f:
                 json.dump(fetch_info,f,indent=4)
-    
+
         fetch_date = datetime.datetime.strptime(fetch_info['date'], "%Y-%m-%d %H:%M:%S.%f")
-        if fetch_date.day != datetime.datetime.now().day:
+        if fetch_date.day != datetime.datetime.now().day or missing_results_json:
             logger.info(f"f1 data hasnt been fetched today")
             self.cache_results() # and save them
             fetch_info['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")

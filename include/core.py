@@ -35,6 +35,7 @@ f1_module = f1_data.F1DataFetcher()
 @bot.event
 async def on_ready():
     logger.info(f'Logged in as {bot.user}\n------\n')
+    init_stage()
     bot.tree.copy_global_to(guild=discord.Object(id=1078427611597906001))
     await bot.tree.sync(guild=discord.Object(id=1078427611597906001))
     channel = bot.get_channel(CHANNEL_ID)
@@ -59,6 +60,27 @@ Boot start: {datetime.datetime.now()}
 
     await schedule_daily_message()
 
+
+def init_stage():
+    dirs = ["data","config","inventory","logs","password","uploads","token"]
+  
+    # Parent Directory path
+    parent_dir = f"{current_directory}/resources/"
+    
+    # Path
+    for dir in dirs:
+        path = os.path.join(parent_dir,dir)
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            logger.info(f"{dir} already exists")
+        else:
+            logger.info(f"Created: {dir} dir")
+    
+    # Create the directory
+    # 'GeeksForGeeks' in
+    # '/home / User / Documents'
+    
 
 def get_manifest_version_info():
     git_link = "https://github.com/gregoryhornyak/discord_bot/blob/master/docs/manifest/manifest.json?raw=true"
@@ -247,9 +269,13 @@ async def eval(ctx:Interaction):
     # - all users
 
     # guess_db - users' guesses on race results
+    try:
+        with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
+            guess_db = json.load(f)
+    except FileNotFoundError:
+        ctx.channel.send("No guesses yet")
+        return 0
 
-    with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
-        guess_db = json.load(f)
     # does it need to be transformed into a dataframe?
     guess_db = f1_data.pd.DataFrame.from_dict(guess_db, orient='index')
     guess_db.reset_index(inplace=True)
@@ -258,14 +284,34 @@ async def eval(ctx:Interaction):
     logger.info(f"{guess_db_reversed = }")
 
     # results - official results
-
+    # existence assured by f1_module
     with open(f"{RESULTS_PATH}results.json", "r") as f:
         results = json.load(f)
 
     # collect score table entries
-
-    with open(f'{SCORE_TABLE_PATH}score_table.json', 'r') as f:
-        scoring_board = json.load(f)
+    try:
+        with open(f'{SCORE_TABLE_PATH}score_table.json', 'r') as f:
+            scoring_board = json.load(f)
+    except FileNotFoundError:
+        logger.warning("Missing scoring table!")
+        scoring_board = {
+    "FP1": 9,
+    "FP2": 3,
+    "FP3": 1,
+    "Q1ST": 9,
+    "Q2ND": 3,
+    "Q3RD": 1,
+    "Q_BOTR": 18,
+    "R1ST": 27,
+    "R2ND": 9,
+    "R3RD": 3,
+    "R_BOTR": 54,
+    "R_DOTD": 69,
+    "R_FAST": 84,
+    "R_DNF": 50
+}
+        with open(f'{SCORE_TABLE_PATH}score_table.json', 'w') as f:
+            json.dump(scoring_board,f,indent=4)
 
     # users_db
 
