@@ -491,7 +491,7 @@ async def play(ctx:Interaction,person:typing.Literal["lajos","hosszulajos","vity
     }
 
     source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(song_list[person]))
-    await ctx.guild.voice_client.connect()
+    await ctx.guild.voice_client.connect(timeout=2.1,reconnect=True)
     ctx.guild.voice_client.play(source)
     await ctx.response.send_message(f"{person}-t hallhatjuk",ephemeral=True)
     
