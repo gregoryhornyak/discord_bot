@@ -61,7 +61,7 @@ class F1DataFetcher:
         try:
             with open(f"{RESULTS_PATH}fetching_log.json","r") as f:
                 fetch_info = json.load(f)
-        except json.decoder.JSONDecodeError:
+        except json.decoder.JSONDecodeError or FileNotFoundError:
             logger.info("Faulty json file")
             fetch_info['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             with open(f"{RESULTS_PATH}fetching_log.json","w") as f:
