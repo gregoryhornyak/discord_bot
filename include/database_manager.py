@@ -37,7 +37,7 @@ def save_guess(name,id,select_race,select_driver,next_race_id,dnf=False):
             "user_id": str(_id),
             "race_id": _next_race_id,
             "race_type": _select_race,
-            "number": str(_select_driver)
+            "driver_name": str(_select_driver)
         }
         else:
             return {

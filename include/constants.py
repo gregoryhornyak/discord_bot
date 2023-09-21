@@ -3,7 +3,7 @@ import json
 UPCOMING_DATE_PATH = "resources/data/"
 RESULTS_PATH = "resources/data/"
 TOKEN_PATH = "resources/token/"
-PASSW_PATH = "resources/passw/"
+PASSW_PATH = "resources/password/"
 UPLOADS_PATH = "resources/uploads/"
 GUESS_FILE = "resources/data/"
 SCORES_FILE = "resources/scores/"
