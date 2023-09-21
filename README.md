@@ -18,11 +18,15 @@
 
 ### Myguess method (returns a png)
 
-![screenshot from Discord](docs/images/screenShot_last_results.png)
+![screenshot from Discord](docs/images/myguess.png)
 
 ### Setdate method
 
+/date 2023 10 22 -> tell the bot when is the race first day
+
 ### Evaluate method
+
+/eval -> calculate points for players
 
 ---
 
