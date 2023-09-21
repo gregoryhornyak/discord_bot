@@ -53,7 +53,8 @@ async def on_ready():
     boot_message = f"""
 {manifest_info['bot_name']} v{manifest_info['version']}
 is running in {channel.name} channel
-Latest update: {man_version['latest']}
+Latest version: {man_version}
+Latest update: {manifest_info['latest']}
 Boot start: {datetime.datetime.now()}
 """
     await channel.send(boot_message,delete_after=10)
