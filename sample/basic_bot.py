@@ -4,8 +4,6 @@ from include import core
 
 def main():
 
-    core.logger.info("Discord bot started")
-
     TOKEN = ""
 
     current_directory = core.os.getcwd()
