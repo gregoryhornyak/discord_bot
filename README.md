@@ -14,7 +14,7 @@
 
 ### Guess method
 
-![screenshot from Discord](docs/images/screenShot_guess.png)
+![screenshot from Discord](docs/images/guess_video_record.webm)
 
 ### Myguess method (returns a png)
 
