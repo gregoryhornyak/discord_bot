@@ -21,6 +21,13 @@ import include.database_manager as db_man
 import asyncio
 from dateutil.parser import parse
 
+##
+## TODO
+## 
+##  Implement Sprint results
+##
+
+
 #----< Working directory >----#
 
 current_directory = os.getcwd()
@@ -147,7 +154,7 @@ def get_discord_members(ctx:Interaction):
     return user_info
 
 @bot.tree.command(name="guess",description="-")
-async def guess(ctx:discord.Interaction):
+async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a slash command is a good option?
     """Allows the user to make a guess"""
     await ctx.response.defer(ephemeral=True)
     channel = bot.get_channel(CHANNEL_ID)
@@ -282,12 +289,18 @@ async def eval(ctx:Interaction):
     guess_db.reset_index(inplace=True)
     guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
     guess_db_reversed = guess_db.iloc[::-1]
-    logger.info(f"{guess_db_reversed = }")
+    #logger.info(f"{guess_db_reversed = }")
+
+    # f1 data
+
+    race_id = f1_module.get_prev_race_id_and_name()['id']
+    race_name = f1_module.get_prev_race_id_and_name()['name']
 
     # results - official results
     # existence assured by f1_module
     with open(f"{RESULTS_PATH}results.json", "r") as f:
         results = json.load(f)
+    results = results[race_id]
 
     # collect score table entries
     try:
@@ -319,9 +332,7 @@ async def eval(ctx:Interaction):
     with open(f'{INVENTORY_PATH}users_db.json', 'r') as f:
         users_db = json.load(f)
 
-    # f1 data
-
-    race_id = f1_module.get_prev_race_id_and_name()['id']
+    
 
     # collect users
 
@@ -330,28 +341,44 @@ async def eval(ctx:Interaction):
 
     # --- all resources are collected
 
+    #
+    # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
+    #
+
+
     ## ready for evaluation  
 
     # for every user
     for user_name, user_id in members.items():
         user_guesses = guess_db_reversed[guess_db_reversed['user_name'] == user_name]
         user_guesses_unique = user_guesses.drop_duplicates(subset=['race_type'])
+        logger.info(f"{user_guesses_unique = }")
         # for every guess
         for (guessed_race_type, guessed_driver_name) in (zip(user_guesses_unique['race_type'], user_guesses_unique['driver_name'])):
-            # for every race_type's result
-            for race_type,driver_name in scores_json.items():
+            # for every race_type's row
+            for race_type,driver_name in results.items():
+                # for every race type
                 if guessed_race_type == race_type:
+                    logger.info(f"{guessed_race_type} == {race_type}")
+                    logger.info(f"{guessed_driver_name} == {driver_name}")
+                    # for every guess 
                     if guessed_driver_name == driver_name:
                         point = scoring_board[race_type] # each race_type's score
-                        logger.info(f"{user_name}: match! {driver_name},{race_type} - {point} point")
-                        
-                        #await ctx.response.send_message(f"{user_name} guessed correct: {driver_name} | {race_type} - {point} points!")
-                        #if round_score not empty:
+                        logger.info(f"MATCH! {user_name}: {race_type},{driver_name} - {point} point")
                         users_db[str(user_id)]["round_score"][str(race_id)] = {}
+                        users_db[str(user_id)]["round_score"][str(race_id)]["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                        users_db[str(user_id)]["round_score"][str(race_id)]["location"] = race_name
                         users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = {}
                         users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][race_type] = driver_name # if not DNF
+    
+    with open(f'{INVENTORY_PATH}users_db.json', 'w') as f:
+        json.dump(users_db,f,indent=4)
+
+    logger.info("Dumped users_db")
                         
     await ctx.followup.send("Finished evaluating")
+
+    logger.info("eval finished")
 
 @bot.tree.command(name="date",description="-")    
 async def setdate(interaction:Interaction, *, date_input:str):

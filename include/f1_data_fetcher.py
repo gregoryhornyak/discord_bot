@@ -48,6 +48,13 @@ class F1DataFetcher:
         }
 
     def __init__(self):
+        self.check_fetch_log()
+        self._get_prev_race_id_and_name() # first | MUST DO
+        self._get_next_race_id_and_name() 
+        self._update_urls() # second | MUST DO
+        logger.warning(f"NEXT RACE: {self.next_race_name}: {self.next_race_id}")
+
+    def check_fetch_log(self):
         fetch_info = {}
         res_temp = {}
         missing_results_json = False
@@ -61,8 +68,12 @@ class F1DataFetcher:
         try:
             with open(f"{RESULTS_PATH}fetching_log.json","r") as f:
                 fetch_info = json.load(f)
-        except json.decoder.JSONDecodeError or FileNotFoundError:
+        except json.decoder.JSONDecodeError:
             logger.info("Faulty json file")
+            fetch_info['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+            with open(f"{RESULTS_PATH}fetching_log.json","w") as f:
+                json.dump(fetch_info,f,indent=4)
+        except FileNotFoundError:
             fetch_info['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
             with open(f"{RESULTS_PATH}fetching_log.json","w") as f:
                 json.dump(fetch_info,f,indent=4)
@@ -78,21 +89,17 @@ class F1DataFetcher:
         with open(f"{RESULTS_PATH}fetching_log.json","w") as f:
             json.dump(fetch_info,f,indent=4)
 
-        logger.info("F1_bot task complete")
-
+        logger.info("F1_bot fetch-task complete")
 
     def _update_urls(self) -> None:
-        prev_race_id = F1DataFetcher.prev_race_id
-        prev_race_name = F1DataFetcher.prev_race_name
-        F1DataFetcher.prev_race_results_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/race-result.html"
-        F1DataFetcher.prev_qual_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/qualifying.html"
-        F1DataFetcher.prev_free_prac_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/practice-"
-        F1DataFetcher.prev_sprint_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/sprint-results.html"
-        F1DataFetcher.prev_dotd_url = "https://www.formula1.com/en/latest/article.driver-of-the-day-2023.5wGE2ke3SFqQwabYVQXLnF.html"
-        F1DataFetcher.prev_rf_url = "https://www.formula1.com/en/results.html/2023/fastest-laps.html"
-
-    def update_url(self):
-        self._update_urls()
+        prev_race_id = self.prev_race_id
+        prev_race_name = self.prev_race_name
+        self.prev_race_results_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/race-result.html"
+        self.prev_qual_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/qualifying.html"
+        self.prev_free_prac_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/practice-"
+        self.prev_sprint_url = f"https://www.formula1.com/en/results.html/2023/races/{prev_race_id}/{prev_race_name}/sprint-results.html"
+        self.prev_dotd_url = "https://www.formula1.com/en/latest/article.driver-of-the-day-2023.5wGE2ke3SFqQwabYVQXLnF.html"
+        self.prev_rf_url = "https://www.formula1.com/en/results.html/2023/fastest-laps.html"
 
     def _request_and_get_soap(self,url,fpN=0) -> BeautifulSoup:
         self._update_urls()
@@ -107,7 +114,7 @@ class F1DataFetcher:
 
     def _get_prev_race_id_and_name(self) -> None:
         """updates local-class id and name"""
-        all_races_soup = self._request_and_get_soap(F1DataFetcher.all_races_url)
+        all_races_soup = self._request_and_get_soap(self.all_races_url)
         all_races_names_data = all_races_soup.find_all('a', class_="dark bold ArchiveLink")
         all_races_names = [name.get_text().strip() for name in all_races_names_data]
         all_races_ids_data = all_races_soup.find_all('a', class_='ArchiveLink')
@@ -116,14 +123,13 @@ class F1DataFetcher:
         previous_race_id = all_races_ids_text[-1]
         previous_race_name = all_races_names[-1]
         #logger.info(f"{previous_race_id = }\n{previous_race_name = }")
-        F1DataFetcher.prev_race_id = previous_race_id
-        F1DataFetcher.prev_race_name = previous_race_name
+        self.prev_race_id = previous_race_id
+        self.prev_race_name = previous_race_name
 
     def _get_next_race_id_and_name(self) -> None:
         """updates local-class id and name"""
-        all_races_soup = self._request_and_get_soap(F1DataFetcher.all_races_url)
-        all_races_names_data = all_races_soup.find_all('a', 
-                                                       class_="resultsarchive-filter-item-link FilterTrigger")
+        all_races_soup = self._request_and_get_soap(self.all_races_url)
+        all_races_names_data = all_races_soup.find_all('a',class_="resultsarchive-filter-item-link FilterTrigger")
         all_races_names = [name.get('data-value') for name in all_races_names_data]
         middle = all_races_names.index('fastest-laps')
         all_races_names = all_races_names[middle+1:]
@@ -135,17 +141,17 @@ class F1DataFetcher:
         all_races_names_divided = {race.split('/')[0]: process_race_name(race.split('/')[1]) for race in all_races_names}
         next_key = None
         for key in sorted(all_races_names_divided.keys()):
-            if key > str(F1DataFetcher.prev_race_id):
+            if key > str(self.prev_race_id):
                 next_key = key
                 break
 
-        F1DataFetcher.next_race_id = next_key
-        F1DataFetcher.next_race_name = all_races_names_divided[next_key]
-        logger.info(f"Next race: {F1DataFetcher.next_race_id} {F1DataFetcher.next_race_name}")
+        self.next_race_id = next_key
+        self.next_race_name = all_races_names_divided[next_key]
+        logger.info(f"Next race: {self.next_race_id} {self.next_race_name}")
 
     def get_prev_race_results(self) -> None:
         """ r1-3, r-botr, r-dnf results """
-        prev_race_soap = self._request_and_get_soap(F1DataFetcher.prev_race_results_url)
+        prev_race_soap = self._request_and_get_soap(self.prev_race_results_url)
         prev_race_table = prev_race_soap.find_all('tr')
         prev_race_table_text = [name.get_text().strip() for name in prev_race_table]
         prev_race_table_text_clear = [name.split("\n") for name in prev_race_table_text]
@@ -157,27 +163,27 @@ class F1DataFetcher:
         prev_race_table_df = pd.DataFrame(prev_race_table_clean, columns=prev_race_table_header)
         #logger.info(f"{prev_race_table_df = }")
         
-        F1DataFetcher.score_board["R1ST"] = prev_race_table_df.loc[0]['Driver']
-        F1DataFetcher.score_board["R2ND"] = prev_race_table_df.loc[1]['Driver']
-        F1DataFetcher.score_board["R3RD"] = prev_race_table_df.loc[2]['Driver']
+        self.score_board["R1ST"] = prev_race_table_df.loc[0]['Driver']
+        self.score_board["R2ND"] = prev_race_table_df.loc[1]['Driver']
+        self.score_board["R3RD"] = prev_race_table_df.loc[2]['Driver']
 
         for (driver, team) in (zip(prev_race_table_df['Driver'], prev_race_table_df['Car'])):
-            logger.info(f"TEAM: {team.upper()} in {F1DataFetcher.best_three}?")
-            if team.upper() not in F1DataFetcher.best_three:
-                logger.info(f"No, {team.upper()} isnt in {F1DataFetcher.best_three}")
-                F1DataFetcher.score_board["R_BOTR"] = driver
+            logger.info(f"TEAM: {team.upper()} in {self.best_three}?")
+            if team.upper() not in self.best_three:
+                logger.info(f"No, {team.upper()} isnt in {self.best_three}")
+                self.score_board["R_BOTR"] = driver
                 break
 
         for state in prev_race_table_df['Time/Retired']:
             if state in ['DNS','DNF']:
-                if F1DataFetcher.score_board["R_DNF"] == '':
-                    F1DataFetcher.score_board["R_DNF"] = '1'
+                if self.score_board["R_DNF"] == '':
+                    self.score_board["R_DNF"] = '1'
                 else:
-                    F1DataFetcher.score_board["R_DNF"] = str(1+int(F1DataFetcher.score_board["R_DNF"]))
+                    self.score_board["R_DNF"] = str(1+int(self.score_board["R_DNF"]))
 
     def get_prev_qual_results(self):
         """find out QUALIFYING results in previous race"""
-        prev_qual_soap = self._request_and_get_soap(F1DataFetcher.prev_qual_url)
+        prev_qual_soap = self._request_and_get_soap(self.prev_qual_url)
         prev_qual_table = prev_qual_soap.find_all('tr')
         prev_qual_table_text = [name.get_text().strip() for name in prev_qual_table]
         prev_qual_table_text_clear = [name.split("\n") for name in prev_qual_table_text]
@@ -189,19 +195,19 @@ class F1DataFetcher:
         prev_qual_table_df = pd.DataFrame(prev_qual_table_clean, columns=prev_qual_table_header)
         #logger.info(f"{prev_qual_table_df = }")
 
-        F1DataFetcher.score_board["Q1ST"] = prev_qual_table_df.loc[0]['Driver']
-        F1DataFetcher.score_board["Q2ND"] = prev_qual_table_df.loc[1]['Driver']
-        F1DataFetcher.score_board["Q3RD"] = prev_qual_table_df.loc[2]['Driver']
+        self.score_board["Q1ST"] = prev_qual_table_df.loc[0]['Driver']
+        self.score_board["Q2ND"] = prev_qual_table_df.loc[1]['Driver']
+        self.score_board["Q3RD"] = prev_qual_table_df.loc[2]['Driver']
 
         for (driver, team) in (zip(prev_qual_table_df['Driver'], prev_qual_table_df['Car'])):
-            if team not in F1DataFetcher.best_three:
-                F1DataFetcher.score_board["Q_BOTR"] = driver
+            if team not in self.best_three:
+                self.score_board["Q_BOTR"] = driver
                 break
 
 
     def get_prev_fpX_results(self,fpN):
         """ find out FP1 results in previous race"""
-        prev_fpN_soap = self._request_and_get_soap(F1DataFetcher.prev_free_prac_url,fpN)
+        prev_fpN_soap = self._request_and_get_soap(self.prev_free_prac_url,fpN)
         prev_fpN_table = prev_fpN_soap.find_all('tr')
         prev_fpN_table_text = [name.get_text().strip() for name in prev_fpN_table]
         prev_fpN_table_text_clean = [name.split("\n") for name in prev_fpN_table_text]
@@ -213,7 +219,7 @@ class F1DataFetcher:
         prev_fpN_table_df = pd.DataFrame(prev_fpN_table_clean, columns=prev_fpN_table_header)
         #logger.info(f"FP{fpN} results: {prev_fpN_table_df = }")
         fp_round = f"FP{fpN}"
-        F1DataFetcher.score_board[fp_round] = prev_fpN_table_df.loc[0]['Driver']
+        self.score_board[fp_round] = prev_fpN_table_df.loc[0]['Driver']
 
     def _event_in_schedule(self,event_name,event_url):
         # try to find if there was a sprint
@@ -230,10 +236,10 @@ class F1DataFetcher:
 
     def get_prev_sprint_results(self):
         """find sprint results"""
-        if not self._event_in_schedule('SPRINT',F1DataFetcher.prev_sprint_url):
+        if not self._event_in_schedule('SPRINT',self.prev_sprint_url):
             logger.info("There was no SPRINT in the last race")
             return 0
-        prev_sprint_soap = self._request_and_get_soap(F1DataFetcher.prev_sprint_url)
+        prev_sprint_soap = self._request_and_get_soap(self.prev_sprint_url)
         prev_sprint_table = prev_sprint_soap.find_all('tr')
         prev_sprint_table_text = [name.get_text().strip() for name in prev_sprint_table]
         prev_sprint_table_text_clean = [name.split("\n") for name in prev_sprint_table_text]
@@ -247,17 +253,17 @@ class F1DataFetcher:
 
     def get_prev_dotd_results(self):
         # driver of the day
-        prev_dotd_soap = self._request_and_get_soap(F1DataFetcher.prev_dotd_url)
+        prev_dotd_soap = self._request_and_get_soap(self.prev_dotd_url)
         prev_dotd_text = prev_dotd_soap.find_all('strong')
         prev_dotd_text_clean = [name.get_text().strip() for name in prev_dotd_text]
         prev_dotd_list = prev_dotd_text_clean[1]#latest
         # 'Carlos Sainz - 31.5%\nSergio Perez - 14.8%\nMax Verstappen - 13.3%\nAlex Albon - 10.7%\nCharles Leclerc - 6%',
         dotd = prev_dotd_list.split("\n")[0]
-        F1DataFetcher.score_board["DOTD"] = dotd.split("-")[0].strip()
+        self.score_board["DOTD"] = dotd.split("-")[0].strip()
 
     def get_prev_fastest_results(self):
         """fastest lap driver name"""
-        prev_fast_soap = self._request_and_get_soap(F1DataFetcher.prev_rf_url)
+        prev_fast_soap = self._request_and_get_soap(self.prev_rf_url)
         prev_fast_table = prev_fast_soap.find_all('tr')
         prev_fast_table_text = [name.get_text().strip() for name in prev_fast_table]
         prev_fast_table_text_clean = [name.split("\n") for name in prev_fast_table_text]
@@ -267,17 +273,17 @@ class F1DataFetcher:
         prev_fast_table_filtered = prev_fast_table_filtered[1:]
         prev_fast_table_clean = [[*arr[:1], join_names(arr), *arr[4:]] for arr in prev_fast_table_filtered]
         prev_fast_table_df = pd.DataFrame(prev_fast_table_clean, columns=prev_fast_table_header)
-        F1DataFetcher.score_board["R_FAST"] = prev_fast_table_df.iloc[-1]['Driver']
+        self.score_board["R_FAST"] = prev_fast_table_df.iloc[-1]['Driver']
         #logger.info(f"{prev_fast_table_df = }")
 
     def get_all_results(self):
         """return all results in json"""
-        return F1DataFetcher.score_board
+        return self.score_board
     
     def get_drivers_details(self) -> dict:
         """return driver and team"""
         # for guess selection
-        drivers_soap = self._request_and_get_soap(F1DataFetcher.driver_details_url)
+        drivers_soap = self._request_and_get_soap(self.driver_details_url)
         surnames = drivers_soap.find_all('span', class_="hide-for-mobile")
         firstnames = drivers_soap.find_all('span', class_="hide-for-tablet")
         carnames = drivers_soap.find_all('a', class_="grey semi-bold uppercase ArchiveLink")
@@ -291,7 +297,7 @@ class F1DataFetcher:
     def cache_results(self):
         self._get_prev_race_id_and_name() # first | MUST DO
         self._get_next_race_id_and_name() 
-        self.update_url() # second | MUST DO
+        self._update_urls() # second | MUST DO
         self.get_prev_race_results()
         self.get_prev_sprint_results()
         self.get_prev_fastest_results()
@@ -301,7 +307,7 @@ class F1DataFetcher:
         self.get_prev_qual_results()
         # save race results
         logger.info('F1_MODULE finished fetching')
-        results_json = {F1DataFetcher.prev_race_id: F1DataFetcher.score_board}
+        results_json = {self.prev_race_id: self.score_board}
         with open(f"{RESULTS_PATH}results.json","w") as f:
             json.dump(results_json,f,indent=4)
 
