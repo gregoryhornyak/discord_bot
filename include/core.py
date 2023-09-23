@@ -4,7 +4,6 @@
 
 import discord
 from discord.ext import commands
-#from discord import app_commands
 
 import datetime
 import os
@@ -21,12 +20,14 @@ import include.database_manager as db_man
 
 import asyncio
 from dateutil.parser import parse
+import subprocess
 
 ##
 ## TODO
 ## 
-##  Implement Sprint results
+##  Implement Sprint results ✅
 ##
+##* DEFINE BOT STATES: IDLE / WAITING FOR RACE EVENT / TAKING GUESSES
 
 
 #----< Working directory >----#
@@ -46,24 +47,31 @@ async def on_ready():
     bot.tree.copy_global_to(guild=discord.Object(id=1078427611597906001))
     await bot.tree.sync(guild=discord.Object(id=1078427611597906001))
     channel = bot.get_channel(CHANNEL_ID)
+    #! MESSAGE DELETE SECTION
     history_gen = channel.history(limit=1)
     list_of_messages = []
     async for result in history_gen:
         message = await channel.fetch_message(result.id)
-        list_of_messages.append(message)
-    await channel.delete_messages(list_of_messages,reason="Remove update alert message")
+        if message.content in [BOT_SHUTDOWN_UPGRD_MESSAGE,BOT_START_DETAILS_MESSAGE,BOT_START_SHORT_MESSAGE]:
+            list_of_messages.append(message)
+    await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
     man_version = get_manifest_version_info()
 
     with open(f"{MANIFEST_PATH}manifest.json", "r") as f:
         manifest_info = json.load(f)
 
-    boot_message = f"""
-{manifest_info['bot_name']} v{manifest_info['version']}
-Latest version: {man_version}
-Latest update: {manifest_info['latest']}
-Boot date: {datetime.datetime.now()}
-"""
-    await channel.send(boot_message,delete_after=10)
+    boot_message = f1_data.re.sub(r'bot_name', manifest_info['bot_name'], BOT_START_DETAILS_MESSAGE)
+    boot_message = f1_data.re.sub(r'version', manifest_info['version'], boot_message)
+    boot_message = f1_data.re.sub(r'latest_ver', man_version, boot_message)
+    boot_message = f1_data.re.sub(r'latest_update', manifest_info['latest'], boot_message)
+
+    await channel.send(boot_message,silent=True)
+
+    await bot.change_presence(activity=discord.Game(name="with your mom"))
+
+    await asyncio.sleep(10)
+
+    await channel.last_message.edit(content=BOT_START_SHORT_MESSAGE)
 
     await schedule_daily_message()
 
@@ -88,18 +96,6 @@ def get_manifest_version_info():
     git_link = "https://github.com/gregoryhornyak/discord_bot/blob/master/docs/manifest/manifest.json?raw=true"
     manifest = f1_data.requests.get(git_link).json()
     return manifest['version']
-
-
-"""
-@bot.tree.command(name="del_all",description="long")
-async def delete_all(ctx:Interaction):
-    await ctx.response.defer()
-    channel = bot.get_channel(CHANNEL_ID)
-    history_gen = channel.history(limit=50)
-    list_of_messages = [result async for result in history_gen]
-    await channel.delete_messages(list_of_messages,reason="Remove update alert message")
-    await ctx.followup.send(f"Deleted 50 messages")
-"""
     
 async def schedule_daily_message():
     loop_counter = 0
@@ -130,12 +126,12 @@ async def schedule_daily_message():
             await channel.send("@everyone 3 days until the race!",delete_after=3)
         """
         # morning schedule: auto-testing, fetching
-        if now.hour == 9 and now.minute == 5: # 8:05
-            await channel.send("Doing daily routine")
-        if now.hour == 21 and now.minute == 45: 
+        if now.hour == 7 and now.minute == 5: # 8:05
+            await channel.send("Doing daily routine at 8:05",delete_after=20,silent=True)
+        if now.hour == 21 and now.minute == 45:
             await channel.send("21:45")
         loop_counter += 1
-        await asyncio.sleep(50)
+        await asyncio.sleep(40)
 
 @bot.tree.command(name="upgrade",description="long")
 async def upgrade(interaction:Interaction,password:str):
@@ -147,7 +143,7 @@ async def upgrade(interaction:Interaction,password:str):
         await interaction.response.send_message("Wrong password")
         return 0
     logger.info("BOT SHUTDOWN")
-    await interaction.response.send_message("Bot is shutting down and will be upgraded...")
+    await interaction.response.send_message(BOT_SHUTDOWN_UPGRD_MESSAGE)
     await bot.close()
 
 # function to get every racing date -> save to file -> update alert 
@@ -156,7 +152,11 @@ def get_discord_members(ctx:Interaction):
     user_info = {}
     for member in ctx.guild.members:
         if member.name != "lord_maldonado":
-            user_info[member.name] = member.id
+            user_info[member.name] = {
+                "id": member.id,
+                "discr": member.discriminator,
+                "name": member.global_name
+            }
     return user_info
 
 @bot.tree.command(name="guess",description="-")
@@ -168,14 +168,14 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
 
     # save the data into a file, to avoid long fetching
     drivers_info = f1_module.get_drivers_details()
-    #prev_race_id = get_prev_race_id_and_name()['id']
-    #prev_race_name = get_prev_race_id_and_name()['name']
-    next_race_id = f1_module.get_next_race_id_and_name()['id']
-    next_race_name = f1_module.get_next_race_id_and_name()['name']
+    next_race_id = f1_module.next_race_details['id']
+    next_race_name = f1_module.next_race_details['name']
+    results_board = f1_module.results_board
+    race_types_list = [key for key, value in results_board.items() if value != ""]
 
     select_race = discord.ui.Select(placeholder="Choose a race!",
                                     options=[discord.SelectOption(
-                                        label=race_name, description="---") for race_name in F1_RACE_TYPES if race_name!="R_DNF"])
+                                        label=race_name, description=None) for race_name in race_types_list if race_name!="R_DNF"])
     select_driver = discord.ui.Select(placeholder="Choose a driver",
                                     options=[discord.SelectOption(
                                         label=driver,description=team) for driver,team in drivers_info.items()])
@@ -194,8 +194,13 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     async def button_callback(sub_interaction:Interaction):
         name = sub_interaction.user.name
         id = sub_interaction.user.id
-        db_man.save_guess(name=name,id=id,select_race=select_race,select_driver=select_driver,next_race_id=next_race_id) # dnf=False
-        await sub_interaction.response.send_message("✅",delete_after=1.3)
+        logger.info(f"{name}: {select_race.values[0]} - {select_driver.values[0]} for {next_race_name.capitalize()}")
+        db_man.save_guess(name=name,
+                          id=id,
+                          select_race=select_race.values[0],
+                          select_driver=select_driver.values[0],
+                          next_race_id=next_race_id) # dnf=False
+        await sub_interaction.response.send_message(f"{name}: {select_race.values[0]} - {select_driver.values[0]} for {next_race_name.capitalize()}",silent=True)
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
@@ -207,39 +212,12 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
 #schedule_2023 = "https://www.formula1.com/en/latest/article.formula-1-update-on-the-2023-calendar.4pTQzihtKTiegogmNX5XrP.html"
 
 @bot.tree.command(name="dnf",description="guess num of dnf")
-async def dnf(interaction: discord.Interaction, guess: int):
-    next_race_id = f1_module.get_next_race_id_and_name()['id']
-    db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=guess,dnf=True,next_race_id=next_race_id)
-    await interaction.response.send_message(f'You guessed {guess} number of DNF(s)', ephemeral=True)
+async def dnf(interaction: discord.Interaction, count: int):
+    next_race_id = f1_module.next_race_details['id']
+    db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_race_id)
+    await interaction.response.send_message(f'You guessed {count} number of DNF(s)', ephemeral=True)
 
-@bot.tree.command(name="get_msg",description="get channel history")
-async def get_msg(interaction: discord.Interaction, dist:int=5):
-    # sent_msg = await ctx.send("test message")
-    # await ctx.send(f"{sent_msg.id = }")
-    # msg = await ctx.fetch_message(sent_msg.id)
-    # await ctx.send(f"{msg = }")
-    history_gen = interaction.channel.history(limit=dist)
-    async for result in history_gen:
-        message = await interaction.channel.fetch_message(result.id)
-
-        await interaction.channel.send(f"{message.content = }")
-        # logger.info(f"message: {result}")
-    await interaction.response.send_message(f"Found all {dist} past messages")
-
-@bot.tree.command(name="history",description="-")
-async def history(interaction:Interaction, dist:int=5):
-    # sent_msg = await interaction.response.send_message("test message")
-    # await interaction.response.send_message(f"{sent_msg.id = }")
-    # msg = await interaction.fetch_message(sent_msg.id)
-    # await interaction.response.send_message(f"{msg = }")
-    history_gen = interaction.history(limit=dist)
-    async for ser_num,result in enumerate(history_gen):
-        message = await interaction.fetch_message(result.id)
-        await interaction.response.send_message(f"{ser_num+1}: {message.content}")
-        logger.info(f"message: {result}")
-    await interaction.response.send_message(f"Found all {dist} past message(s)")
-
-async def calendar(interaction:Interaction):
+async def calendar(ctx:Interaction):
     schedule_2023_unknown = "https://www.autosport.com/f1/schedule/2023/"
     calendar_response = db_man.requests.get(schedule_2023_unknown).text
     calendar_soap = db_man.BeautifulSoup(calendar_response, 'html.parser')
@@ -285,7 +263,7 @@ async def eval(ctx:Interaction):
 
     # guess_db - users' guesses on race results
     try:
-        with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
+        with open(f"{GUESS_DB_PATH}guess_db.json", "r") as f:
             guess_db = json.load(f)
     except FileNotFoundError:
         ctx.channel.send("No guesses yet")
@@ -300,8 +278,8 @@ async def eval(ctx:Interaction):
 
     # f1 data
 
-    race_id = f1_module.get_prev_race_id_and_name()['id']
-    race_name = f1_module.get_prev_race_id_and_name()['name']
+    race_id = f1_module.prev_race_details()['id']
+    race_name = f1_module.prev_race_details()['name']
 
     # results - official results
     # existence assured by f1_module
@@ -336,7 +314,7 @@ async def eval(ctx:Interaction):
 
     # users_db
 
-    with open(f'{INVENTORY_PATH}users_db.json', 'r') as f:
+    with open(f'{USERS_DB_PATH}users_db.json', 'r') as f:
         users_db = json.load(f)
 
     
@@ -383,7 +361,7 @@ async def eval(ctx:Interaction):
                         # but not for points, to restrict overwriting guesses
                         users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][race_type] = point # if not DNF
     
-    with open(f'{INVENTORY_PATH}users_db.json', 'w') as f:
+    with open(f'{USERS_DB_PATH}users_db.json', 'w') as f:
         json.dump(users_db,f,indent=4)
 
     logger.info("Dumped users_db")
@@ -412,7 +390,7 @@ async def setdate(interaction:Interaction, *, date_input:str):
 @bot.tree.command(name="showresults",description="-")
 async def results(ctx:Interaction):
     results = f1_module.results_board
-    await ctx.channel.send(f"For {f1_module.prev_race_name}:")
+    await ctx.channel.send(f"For {f1_module.prev_race_details['name']}:")
     pretty_json = json.dumps(results, indent=4)
     await ctx.response.send_message(pretty_json)
 
@@ -456,24 +434,29 @@ async def getlogs(interaction:Interaction, num_of_lines:int=500):
 
     # only send back last N number of lines to reduce file size
 
-@bot.tree.command(name="myguess",description="-")
-async def myguess(ctx:discord.Interaction):
-    with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
+@bot.tree.command(name="my_history",description="-")
+async def myguess(ctx:discord.Interaction,username:str=""):
+    with open(f"{GUESS_DB_PATH}guess_db.json", "r") as f:
             guesses_database = json.load(f)
     user_guesses = f1_data.pd.DataFrame.from_dict(guesses_database, orient='index')
     user_guesses.reset_index(inplace=True)
     user_guesses.rename(columns={'index': 'time_stamp'}, inplace=True)
     user_guesses_reversed = user_guesses.iloc[::-1]
-    
-    cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == ctx.user.name]
+    logger.info(f"{get_discord_members(ctx=ctx) = }")
+    user_name = ""
+    if username:
+        user_name = username
+    else:   
+        user_name = ctx.user.name
+    cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user_name]
 
     cur_user_unique = cur_user.drop_duplicates(subset=['race_type'])
     cur_user_unique.set_index('race_type', inplace=True)
     cur_user_unique = cur_user_unique.sort_values(by='race_type')
     logger.info(cur_user_unique)
-    race_name = f1_module.get_next_race_id_and_name()["name"]
+    race_name = f1_module.next_race_details["name"]
     with open(f"{UPLOADS_PATH}user_guesses_list.md",'w') as f:
-        f.write(f"### {'&nbsp;'*11} {ctx.user.name}'s guesses for {race_name} {datetime.datetime.now().year}\n")
+        f.write(f"### {'&nbsp;'*11} {user_name}'s guesses for {race_name} {datetime.datetime.now().year}\n")
         f.write(cur_user_unique['driver_name'].to_markdown())
     
     cmd = f'pandoc {UPLOADS_PATH}user_guesses_list.md -o {UPLOADS_PATH}user_guesses_list.pdf'
@@ -485,7 +468,14 @@ async def myguess(ctx:discord.Interaction):
 
     await ctx.response.send_message(file=discord.File(f"{UPLOADS_PATH}user_guesses_list_zoomed.png"))
 
-#--------< Funny Functions >----#
+#--------< Funny Functions aka Easter Eggs >----#
+
+@bot.tree.command(name="dadjoke",description="-")
+async def dadjoke(ctx:Interaction):
+    cmd = 'curl -H "Accept: application/json" https://icanhazdadjoke.com/'
+    output = subprocess.check_output(cmd, shell=True,text=True)
+    joke_json = json.loads(output)
+    await ctx.response.send_message(f'Dad joke of the day:\n{joke_json["joke"]}')
 
 @bot.tree.command(name="whoami",description="-")
 async def whoami(ctx:Interaction):
@@ -542,7 +532,6 @@ async def join(ctx:Interaction):
         return await ctx.guild.voice_client.move_to("General")
     channel = [chnl for chnl in ctx.guild.voice_channels][0]
     await channel.connect()
-    await ctx.response.pong()
 
 @bot.tree.command(name="halljuk",description="-")
 async def play(ctx:Interaction, person:typing.Literal["lajos","hosszulajos","vitya","max","feri","hektor","kozso","furaferi"]):
@@ -569,20 +558,8 @@ async def stop(ctx:Interaction):
     await ctx.guild.voice_client.disconnect()
     #await ctx.followup.send("---",ephemeral=True)
 
-### UNSTABLE
-
-def create_resources_dir():
-    # create resources directory and subdirectories
-    try:
-        directory = "resources"
-        path = os.path.join('./', directory)
-        os.mkdir(path)
-        print("Directory '% s' created" % directory)
-    except FileExistsError:
-        logger.info("Resources dir already exists")
-
 #----< Main Function Init >----#
 
-
 if __name__ == "__main__":
+    logger.warning("LOCAL FUNCTION RUNNING")
     pass
