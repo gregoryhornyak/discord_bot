@@ -1,6 +1,6 @@
 # Formula One Discord Bot
 
-![mylogo](docs/images/custom_disc_logo.png)
+![mylogo](docs/images/f1_disc_logo-removebg-preview.png)
 
 #### Automated bot for a Discord server to fetch Formula One results
 
