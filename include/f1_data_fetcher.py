@@ -30,7 +30,7 @@ class F1DataFetcher:
 
     ## race types and scores
 
-    score_board = {
+    results_board = {
         "FP1": "",
         "FP2": "",
         "FP3": "",
@@ -52,7 +52,14 @@ class F1DataFetcher:
         self._get_prev_race_id_and_name() # first | MUST DO
         self._get_next_race_id_and_name() 
         self._update_urls() # second | MUST DO
+        self.load_results()
         logger.warning(f"NEXT RACE: {self.next_race_name}: {self.next_race_id}")
+
+    def load_results(self):
+        with open(f"{RESULTS_PATH}results.json","r") as f:
+            results_json = json.load(f)
+        self.results_board = results_json[self.prev_race_id]
+        logger.info(f"loaded results into instance")
 
     def check_fetch_log(self):
         fetch_info = {}
@@ -163,23 +170,23 @@ class F1DataFetcher:
         prev_race_table_df = pd.DataFrame(prev_race_table_clean, columns=prev_race_table_header)
         #logger.info(f"{prev_race_table_df = }")
         
-        self.score_board["R1ST"] = prev_race_table_df.loc[0]['Driver']
-        self.score_board["R2ND"] = prev_race_table_df.loc[1]['Driver']
-        self.score_board["R3RD"] = prev_race_table_df.loc[2]['Driver']
+        self.results_board["R1ST"] = prev_race_table_df.loc[0]['Driver']
+        self.results_board["R2ND"] = prev_race_table_df.loc[1]['Driver']
+        self.results_board["R3RD"] = prev_race_table_df.loc[2]['Driver']
 
         for (driver, team) in (zip(prev_race_table_df['Driver'], prev_race_table_df['Car'])):
             logger.info(f"TEAM: {team.upper()} in {self.best_three}?")
             if team.upper() not in self.best_three:
                 logger.info(f"No, {team.upper()} isnt in {self.best_three}")
-                self.score_board["R_BOTR"] = driver
+                self.results_board["R_BOTR"] = driver
                 break
 
         for state in prev_race_table_df['Time/Retired']:
             if state in ['DNS','DNF']:
-                if self.score_board["R_DNF"] == '':
-                    self.score_board["R_DNF"] = '1'
+                if self.results_board["R_DNF"] == '':
+                    self.results_board["R_DNF"] = '1'
                 else:
-                    self.score_board["R_DNF"] = str(1+int(self.score_board["R_DNF"]))
+                    self.results_board["R_DNF"] = str(1+int(self.results_board["R_DNF"]))
 
     def get_prev_qual_results(self):
         """find out QUALIFYING results in previous race"""
@@ -195,13 +202,13 @@ class F1DataFetcher:
         prev_qual_table_df = pd.DataFrame(prev_qual_table_clean, columns=prev_qual_table_header)
         #logger.info(f"{prev_qual_table_df = }")
 
-        self.score_board["Q1ST"] = prev_qual_table_df.loc[0]['Driver']
-        self.score_board["Q2ND"] = prev_qual_table_df.loc[1]['Driver']
-        self.score_board["Q3RD"] = prev_qual_table_df.loc[2]['Driver']
+        self.results_board["Q1ST"] = prev_qual_table_df.loc[0]['Driver']
+        self.results_board["Q2ND"] = prev_qual_table_df.loc[1]['Driver']
+        self.results_board["Q3RD"] = prev_qual_table_df.loc[2]['Driver']
 
         for (driver, team) in (zip(prev_qual_table_df['Driver'], prev_qual_table_df['Car'])):
             if team not in self.best_three:
-                self.score_board["Q_BOTR"] = driver
+                self.results_board["Q_BOTR"] = driver
                 break
 
 
@@ -219,7 +226,7 @@ class F1DataFetcher:
         prev_fpN_table_df = pd.DataFrame(prev_fpN_table_clean, columns=prev_fpN_table_header)
         #logger.info(f"FP{fpN} results: {prev_fpN_table_df = }")
         fp_round = f"FP{fpN}"
-        self.score_board[fp_round] = prev_fpN_table_df.loc[0]['Driver']
+        self.results_board[fp_round] = prev_fpN_table_df.loc[0]['Driver']
 
     def _event_in_schedule(self,event_name,event_url):
         # try to find if there was a sprint
@@ -259,7 +266,7 @@ class F1DataFetcher:
         prev_dotd_list = prev_dotd_text_clean[1]#latest
         # 'Carlos Sainz - 31.5%\nSergio Perez - 14.8%\nMax Verstappen - 13.3%\nAlex Albon - 10.7%\nCharles Leclerc - 6%',
         dotd = prev_dotd_list.split("\n")[0]
-        self.score_board["DOTD"] = dotd.split("-")[0].strip()
+        self.results_board["DOTD"] = dotd.split("-")[0].strip()
 
     def get_prev_fastest_results(self):
         """fastest lap driver name"""
@@ -273,12 +280,12 @@ class F1DataFetcher:
         prev_fast_table_filtered = prev_fast_table_filtered[1:]
         prev_fast_table_clean = [[*arr[:1], join_names(arr), *arr[4:]] for arr in prev_fast_table_filtered]
         prev_fast_table_df = pd.DataFrame(prev_fast_table_clean, columns=prev_fast_table_header)
-        self.score_board["R_FAST"] = prev_fast_table_df.iloc[-1]['Driver']
+        self.results_board["R_FAST"] = prev_fast_table_df.iloc[-1]['Driver']
         #logger.info(f"{prev_fast_table_df = }")
 
     def get_all_results(self):
         """return all results in json"""
-        return self.score_board
+        return self.results_board
     
     def get_drivers_details(self) -> dict:
         """return driver and team"""
@@ -307,7 +314,7 @@ class F1DataFetcher:
         self.get_prev_qual_results()
         # save race results
         logger.info('F1_MODULE finished fetching')
-        results_json = {self.prev_race_id: self.score_board}
+        results_json = {self.prev_race_id: self.results_board}
         with open(f"{RESULTS_PATH}results.json","w") as f:
             json.dump(results_json,f,indent=4)
 

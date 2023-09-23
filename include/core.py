@@ -12,6 +12,7 @@ import os
 import typing
 
 from discord.interactions import Interaction
+from discord import voice_client 
 
 from include.logging_manager import logger
 from include.constants import *
@@ -42,7 +43,6 @@ f1_module = f1_data.F1DataFetcher()
 @bot.event
 async def on_ready():
     logger.info(f'Logged in as {bot.user}\n------\n')
-    init_stage()
     bot.tree.copy_global_to(guild=discord.Object(id=1078427611597906001))
     await bot.tree.sync(guild=discord.Object(id=1078427611597906001))
     channel = bot.get_channel(CHANNEL_ID)
@@ -59,21 +59,20 @@ async def on_ready():
 
     boot_message = f"""
 {manifest_info['bot_name']} v{manifest_info['version']}
-is running in {channel.name} channel
 Latest version: {man_version}
 Latest update: {manifest_info['latest']}
-Boot start: {datetime.datetime.now()}
+Boot date: {datetime.datetime.now()}
 """
     await channel.send(boot_message,delete_after=10)
 
     await schedule_daily_message()
 
 
-def init_stage():
+def init_stage(cur_dir):
     dirs = ["data","config","inventory","logs","password","uploads","token"]
   
     # Parent Directory path
-    parent_dir = f"{current_directory}/resources/"
+    parent_dir = f"{cur_dir}/resources/"
     
     # Path
     for dir in dirs:
@@ -84,17 +83,24 @@ def init_stage():
             logger.info(f"{dir} already exists")
         else:
             logger.info(f"Created: {dir} dir")
-    
-    # Create the directory
-    # 'GeeksForGeeks' in
-    # '/home / User / Documents'
-    
 
 def get_manifest_version_info():
     git_link = "https://github.com/gregoryhornyak/discord_bot/blob/master/docs/manifest/manifest.json?raw=true"
     manifest = f1_data.requests.get(git_link).json()
     return manifest['version']
 
+
+"""
+@bot.tree.command(name="del_all",description="long")
+async def delete_all(ctx:Interaction):
+    await ctx.response.defer()
+    channel = bot.get_channel(CHANNEL_ID)
+    history_gen = channel.history(limit=50)
+    list_of_messages = [result async for result in history_gen]
+    await channel.delete_messages(list_of_messages,reason="Remove update alert message")
+    await ctx.followup.send(f"Deleted 50 messages")
+"""
+    
 async def schedule_daily_message():
     loop_counter = 0
     upcoming_date = ""
@@ -158,7 +164,7 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     """Allows the user to make a guess"""
     await ctx.response.defer(ephemeral=True)
     channel = bot.get_channel(CHANNEL_ID)
-    await channel.send("Fetching has begun... may take a while",delete_after=1)
+    #await channel.send("Fetching has begun... may take a while",delete_after=1)
 
     # save the data into a file, to avoid long fetching
     drivers_info = f1_module.get_drivers_details()
@@ -189,11 +195,12 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
         name = sub_interaction.user.name
         id = sub_interaction.user.id
         db_man.save_guess(name=name,id=id,select_race=select_race,select_driver=select_driver,next_race_id=next_race_id) # dnf=False
-        await sub_interaction.response.send_message(f"{sub_interaction.user.name}'s guess submitted!",delete_after=1)
+        await sub_interaction.response.send_message("✅",delete_after=1.3)
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
     press_button.callback = button_callback
+
     message = f"Guess for {next_race_name} {datetime.datetime.now().year}\n*For Race DNF, call '/dnf'*\n**(use this form for multiple guesses)**"
     await ctx.followup.send(content=message, view=theView)
 
@@ -352,24 +359,29 @@ async def eval(ctx:Interaction):
     for user_name, user_id in members.items():
         user_guesses = guess_db_reversed[guess_db_reversed['user_name'] == user_name]
         user_guesses_unique = user_guesses.drop_duplicates(subset=['race_type'])
-        logger.info(f"{user_guesses_unique = }")
         # for every guess
         for (guessed_race_type, guessed_driver_name) in (zip(user_guesses_unique['race_type'], user_guesses_unique['driver_name'])):
             # for every race_type's row
             for race_type,driver_name in results.items():
                 # for every race type
                 if guessed_race_type == race_type:
-                    logger.info(f"{guessed_race_type} == {race_type}")
-                    logger.info(f"{guessed_driver_name} == {driver_name}")
+                    #logger.info(f"{guessed_race_type} == {race_type}")
+                    #logger.info(f"{guessed_driver_name} == {driver_name}")
                     # for every guess 
                     if guessed_driver_name == driver_name:
                         point = scoring_board[race_type] # each race_type's score
                         logger.info(f"MATCH! {user_name}: {race_type},{driver_name} - {point} point")
-                        users_db[str(user_id)]["round_score"][str(race_id)] = {}
-                        users_db[str(user_id)]["round_score"][str(race_id)]["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                        users_db[str(user_id)]["round_score"][str(race_id)]["location"] = race_name
-                        users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = {}
-                        users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][race_type] = driver_name # if not DNF
+                        logger.info(f"{race_id = }")
+                        if str(race_id) not in users_db[str(user_id)]["round_score"]:
+                            users_db[str(user_id)]["round_score"][str(race_id)] = {}
+                        if "date" not in users_db[str(user_id)]["round_score"][str(race_id)]:
+                            users_db[str(user_id)]["round_score"][str(race_id)]["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                        if "location" not in users_db[str(user_id)]["round_score"][str(race_id)]:
+                            users_db[str(user_id)]["round_score"][str(race_id)]["location"] = race_name
+                        if "score_board" not in users_db[str(user_id)]["round_score"][str(race_id)]:
+                            users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = {}
+                        # but not for points, to restrict overwriting guesses
+                        users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][race_type] = point # if not DNF
     
     with open(f'{INVENTORY_PATH}users_db.json', 'w') as f:
         json.dump(users_db,f,indent=4)
@@ -397,17 +409,22 @@ async def setdate(interaction:Interaction, *, date_input:str):
 
 #--------< Additional Functions >----#
 
-@bot.tree.command(name="tutorial",description="-")
-async def tutorial(interaction:Interaction):
-    tutorial = """
-Start with setting the race event date - !setdate
-Then make guesses - !g(uess)
-Then wait until the event
-Finally evaluate the results - !e(val)
+@bot.tree.command(name="showresults",description="-")
+async def results(ctx:Interaction):
+    results = f1_module.results_board
+    await ctx.channel.send(f"For {f1_module.prev_race_name}:")
+    pretty_json = json.dumps(results, indent=4)
+    await ctx.response.send_message(pretty_json)
 
-(And start the whole process again)
+
+@bot.tree.command(name="todo",description="please do these tests")
+async def todo(ctx:Interaction):
+    tutorial = """
+1. Check showresults if its correct
+2. Guess as many as possible
+3. Maybe try glitching it
 """
-    await interaction.response.send_message()
+    await ctx.response.send_message(tutorial)
 
 @bot.tree.command(name="rules",description="-")
 async def rules(interaction:Interaction):
@@ -436,12 +453,6 @@ async def getlogs(interaction:Interaction, num_of_lines:int=500):
     cmd = f'pandoc {LOGS_PATH}botlogs_extract.md -o {UPLOADS_PATH}botlogs_extract_{num_of_lines}.pdf'
     os.system(cmd)        
     await interaction.response.send_message(file=discord.File(UPLOADS_PATH+"botlogs_extract_"+str(num_of_lines)+".pdf"),delete_after=6)
-
-    """
-    Error producing PDF.
-    ! Undefined control sequence.
-    l.277 {[}`Bahrain GP\n
-    """
 
     # only send back last N number of lines to reduce file size
 
@@ -472,7 +483,6 @@ async def myguess(ctx:discord.Interaction):
     os.system(cmd2)
     os.system(cmd3)
 
-
     await ctx.response.send_message(file=discord.File(f"{UPLOADS_PATH}user_guesses_list_zoomed.png"))
 
 #--------< Funny Functions >----#
@@ -489,24 +499,55 @@ async def hello(ctx:Interaction):
 async def pina(ctx:Interaction):
     await ctx.response.send_message("Itt egy titkos pina csak neked: ()",ephemeral=True)
 
-@bot.tree.command(name="jo_isten_kuldje_hozzank_le",description="-")
+@bot.tree.command(name="fasz",description="fúú, te kibaszott perverz")
+async def fasz(ctx:Interaction):
+    await ctx.response.send_message("Itt egy titkos fasz csak neked: 8===Đ",ephemeral=True)
+
+@bot.tree.command(name="jo_isten_kuldte_hozzank_le",description="-")
 async def vitya(ctx:Interaction):
     await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"vitya.png"))
 
+@bot.tree.command(name="lajos",description="-")
+async def lajos(ctx:Interaction, pia:str="palinka"):
+    await ctx.response.defer()
+    channel = bot.get_channel(CHANNEL_ID)
+    logger.info("lajos már régen volt az neten bazdmeg")
+    script = """- Szia Lajos. 👋
+-       Szia bazdmeg! Kutyáidat sétáltatod?
+- Hát bazdmeg
+-                 Ilyen...ilyen szerelésbe?
+- Hát miér milyenbe?
+-           Miért nem öltözöl föl rendesen?
+- Hát miér hát nem vagyok rendesen bazdmeg?
+-                                Na jólvan.
+- Most vettem fel bazdmeg délután!
+-             Ilyen... hát kár volt bazdmeg
+- Hát ja
+-                            Na jólvan szia
+- Szia 👋 """
+    if pia == "palinka":
+        for line in script.split('\n'):
+            await channel.send(line)
+    elif pia == "geci":
+        await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi? ||")
+    await ctx.followup.send("---")
+
+### UNSTABLE
+
 @bot.tree.command(name="gyere",description="-")
 async def join(ctx:Interaction):
-
-    for channel in ctx.guild.voice_channels:
-        if channel.name == 'General':
-            logger.debug(f"{channel.name = }")
-            await channel.connect()
-
-    await ctx.response.send_message("Benn vagyok uram",ephemeral=True)
-    logger.info("Bot joined voice channel")
+    await ctx.response.defer()
+    """Joins a voice channel"""
+    if ctx.guild.voice_client is not None:
+        return await ctx.guild.voice_client.move_to("General")
+    channel = [chnl for chnl in ctx.guild.voice_channels][0]
+    await channel.connect()
+    await ctx.response.pong()
 
 @bot.tree.command(name="halljuk",description="-")
-async def play(ctx:Interaction,person:typing.Literal["lajos","hosszulajos","vitya","max","feri","hektor","kozso","furaferi"]):
-
+async def play(ctx:Interaction, person:typing.Literal["lajos","hosszulajos","vitya","max","feri","hektor","kozso","furaferi"]):
+    """Plays a file from the local filesystem"""
+    await ctx.response.defer()
     song_list = {
         "lajos": f"{UPLOADS_PATH}szia_lajos.mp3",
         "hosszulajos": f"{UPLOADS_PATH}lajos_trim.mp3",
@@ -519,14 +560,17 @@ async def play(ctx:Interaction,person:typing.Literal["lajos","hosszulajos","vity
     }
 
     source = discord.PCMVolumeTransformer(discord.FFmpegPCMAudio(song_list[person]))
-    ctx.guild.voice_client.play(source)
-    await ctx.response.send_message(f"{person}-t hallhatjuk",ephemeral=True)
-    
+    ctx.guild.voice_client.play(source, after=lambda e: print(f'Player error: {e}') if e else None)
+    await ctx.response.pong()
+
 @bot.tree.command(name="naszia",description="-")
 async def stop(ctx:Interaction):
     """Stops and disconnects the bot from voice"""
+    await ctx.guild.voice_client.cleanup()
     await ctx.guild.voice_client.disconnect()
-    await ctx.response.send_message("Leléptem akkor bmeg",ephemeral=True)
+    #await ctx.followup.send("---",ephemeral=True)
+
+### UNSTABLE
 
 def create_resources_dir():
     # create resources directory and subdirectories
