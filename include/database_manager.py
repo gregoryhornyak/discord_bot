@@ -12,7 +12,7 @@ def create_single_user_db(user_id,user_name):
             "total_points": 0
         }
     try:
-        with open(f"{INVENTORY_PATH}users_db.json","r") as f:
+        with open(f"{USERS_DB_PATH}users_db.json","r") as f:
             users_db = json.load(f)
     except FileNotFoundError:
         logger.error("No guess_db found")
@@ -24,7 +24,7 @@ def create_single_user_db(user_id,user_name):
         if users_db.get(user_id) is None:
             users_db[user_id] = populate_json()
     finally:
-        with open(f"{INVENTORY_PATH}users_db.json","w") as f:
+        with open(f"{USERS_DB_PATH}users_db.json","w") as f:
             json.dump(users_db,f,indent=4)
 
 def save_guess(name,id,select_race,select_driver,next_race_id,dnf=False):
@@ -44,29 +44,26 @@ def save_guess(name,id,select_race,select_driver,next_race_id,dnf=False):
             "user_name": _name,
             "user_id": str(_id),
             "race_id": _next_race_id,
-            "race_type": _select_race.values[0],
-            "driver_name": _select_driver.values[0]
+            "race_type": _select_race,
+            "driver_name": _select_driver
         }
     if dnf:
         logger.info(f"{name},{select_race},{select_driver}")
     else:
-        logger.info(f"{name},{select_race.values[0]},{select_driver.values[0]}")
+        logger.info(f"{name},{select_race},{select_driver}")
 
     try:
-        with open(f"{INVENTORY_PATH}guess_db.json", "r") as f:
+        with open(f"{GUESS_DB_PATH}guess_db.json", "r") as f:
             guess_db = json.load(f)
-    except FileNotFoundError:
-        logger.error("No guess_db found")
-        guess_db[present] = populate_json()
-    except json.decoder.JSONDecodeError:
-        logger.info("Empty json file")
+    except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
+        logger.error(e)
         guess_db[present] = populate_json()
     else:
         if guess_db.get(present) is None:
             guess_db[present] = populate_json()
     finally:
         logger.info("Guess_db updated")
-        with open(f"{INVENTORY_PATH}guess_db.json", "w") as f:
+        with open(f"{GUESS_DB_PATH}guess_db.json", "w") as f:
             json.dump(guess_db, f, indent=4)
         logger.info("Guess saved")
         
