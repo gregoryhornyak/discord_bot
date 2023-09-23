@@ -566,7 +566,7 @@ async def play(ctx:Interaction, person:typing.Literal["lajos","hosszulajos","vit
 @bot.tree.command(name="naszia",description="-")
 async def stop(ctx:Interaction):
     """Stops and disconnects the bot from voice"""
-    await ctx.guild.voice_client.cleanup()
+    ctx.guild.voice_client.cleanup()
     await ctx.guild.voice_client.disconnect()
     #await ctx.followup.send("---",ephemeral=True)
 
