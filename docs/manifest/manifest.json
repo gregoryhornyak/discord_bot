@@ -1,6 +1,5 @@
 {
     "bot_name": "Formula One Discord Bot",
-    "version": "0.5.4 pre-alpha",
-    "developer": "Gergely Hornyak",
-    "latest": "guess fixed"
+    "version": "0.7 Open-Beta",
+    "latest": "run /todo"
 }

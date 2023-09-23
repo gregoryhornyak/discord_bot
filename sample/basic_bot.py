@@ -9,6 +9,8 @@ def main():
     current_directory = core.os.getcwd()
     core.logger.info(f"{current_directory = }")
 
+    core.init_stage(cur_dir=current_directory)
+
     if len(sys.argv) < 2:
         core.logger.error("Usage: python3 module token")
         sys.exit(1)
