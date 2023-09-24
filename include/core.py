@@ -11,7 +11,6 @@ import os
 import typing
 
 from discord.interactions import Interaction
-from discord import voice_client 
 
 from include.logging_manager import logger
 from include.constants import *
@@ -57,7 +56,7 @@ async def on_ready():
     await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
     man_version = get_manifest_version_info()
 
-    with open(f"{MANIFEST_PATH}manifest.json", "r") as f:
+    with open(f"{MANIFEST_PATH}", "r") as f:
         manifest_info = json.load(f)
 
     boot_message = f1_data.re.sub(r'bot_name', manifest_info['bot_name'], BOT_START_DETAILS_MESSAGE)
@@ -103,7 +102,7 @@ async def schedule_daily_message():
     while True:
         channel = bot.get_channel(CHANNEL_ID)
         try:
-            with open(f"{UPCOMING_DATE_PATH}upcoming_date", "r") as f:
+            with open(f"{UPCOMING_DATE_PATH}", "r") as f:
                 upcoming_date = f.readline()
             upcoming_date = parse(upcoming_date)
             #logger.info(f"Date once set for: {upcoming_date}")
@@ -112,6 +111,9 @@ async def schedule_daily_message():
             # do something
 
         now = datetime.datetime.now()
+        next_first_date = f1_module.next_grand_prix_schedule["practice-1"]
+        next_first_date_day = datetime.datetime.strptime(next_first_date,'%Y-%m-%d %H:%M:%S.%f').day
+        
         # race alert
         #   less than a day
         """
@@ -126,10 +128,11 @@ async def schedule_daily_message():
             await channel.send("@everyone 3 days until the race!",delete_after=3)
         """
         # morning schedule: auto-testing, fetching
-        if now.hour == 7 and now.minute == 5: # 8:05
-            await channel.send("Doing daily routine at 8:05",delete_after=20,silent=True)
-        if now.hour == 21 and now.minute == 45:
-            await channel.send("21:45")
+        if now.hour == 8 and now.minute == 5:
+            await channel.send(f"Next event at {next_first_date}",silent=True)
+            logger.info(f"Morning routine: {now.day} to {next_first_date_day}?")
+            if now.day+3 >= next_first_date_day:
+                await channel.send(f"Next event in 3 days",silent=True)
         loop_counter += 1
         await asyncio.sleep(40)
 
@@ -137,7 +140,7 @@ async def schedule_daily_message():
 async def upgrade(interaction:Interaction,password:str):
     """reboots the whole bot, and updates it from Github"""
     password_stored = ""
-    with open(f"{PASSW_PATH}passw",'r') as f:
+    with open(f"{PASSW_PATH}",'r') as f:
         password_stored = f.read()
     if password!=password_stored:
         await interaction.response.send_message("Wrong password")
@@ -148,22 +151,18 @@ async def upgrade(interaction:Interaction,password:str):
 
 # function to get every racing date -> save to file -> update alert 
 
-def get_discord_members(ctx:Interaction):
+def get_discord_members(ctx:Interaction): # dont change it
     user_info = {}
     for member in ctx.guild.members:
         if member.name != "lord_maldonado":
-            user_info[member.name] = {
-                "id": member.id,
-                "discr": member.discriminator,
-                "name": member.global_name
-            }
+            user_info[member.name] = member.id
     return user_info
 
 @bot.tree.command(name="guess",description="-")
 async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a slash command is a good option?
     """Allows the user to make a guess"""
     await ctx.response.defer(ephemeral=True)
-    channel = bot.get_channel(CHANNEL_ID)
+    
     #await channel.send("Fetching has begun... may take a while",delete_after=1)
 
     # save the data into a file, to avoid long fetching
@@ -217,22 +216,12 @@ async def dnf(interaction: discord.Interaction, count: int):
     db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_race_id)
     await interaction.response.send_message(f'You guessed {count} number of DNF(s)', ephemeral=True)
 
-async def calendar(ctx:Interaction):
-    schedule_2023_unknown = "https://www.autosport.com/f1/schedule/2023/"
-    calendar_response = db_man.requests.get(schedule_2023_unknown).text
-    calendar_soap = db_man.BeautifulSoup(calendar_response, 'html.parser')
-    #logger.info(f"{calendar_soap = }")
-    calendar_table = calendar_soap.find_all("tbody", class_="ms-schedule-table__item ms-schedule-table--local")
-    logger.info(f"{calendar_table}")
-    calendar_table_text = [name.get_text().strip() for name in calendar_table]
-    logger.info(f"{calendar_table_text = }")
-    calendar_table_text_clean = [name.split("\n") for name in calendar_table_text]
-    logger.info(f"{calendar_table_text_clean = }")
-
 @bot.tree.command(name="eval",description="-")
 async def eval(ctx:Interaction):
     """read the results, and compare them with the guesses
     could only happen after the race"""
+
+    channel = bot.get_channel(CHANNEL_ID)
 
     # FETCHING
 
@@ -263,7 +252,7 @@ async def eval(ctx:Interaction):
 
     # guess_db - users' guesses on race results
     try:
-        with open(f"{GUESS_DB_PATH}guess_db.json", "r") as f:
+        with open(f"{GUESS_DB_PATH}", "r") as f:
             guess_db = json.load(f)
     except FileNotFoundError:
         ctx.channel.send("No guesses yet")
@@ -278,18 +267,18 @@ async def eval(ctx:Interaction):
 
     # f1 data
 
-    race_id = f1_module.prev_race_details()['id']
-    race_name = f1_module.prev_race_details()['name']
+    race_id:int = f1_module.prev_race_details['id']
+    race_name:str = f1_module.prev_race_details['name']
 
     # results - official results
     # existence assured by f1_module
-    with open(f"{RESULTS_PATH}results.json", "r") as f:
+    with open(f"{RESULTS_PATH}", "r") as f:
         results = json.load(f)
     results = results[race_id]
 
     # collect score table entries
     try:
-        with open(f'{SCORE_TABLE_PATH}score_table.json', 'r') as f:
+        with open(f'{SCORE_TABLE_PATH}', 'r') as f:
             scoring_board = json.load(f)
     except FileNotFoundError:
         logger.warning("Missing scoring table!")
@@ -309,14 +298,18 @@ async def eval(ctx:Interaction):
     "R_FAST": 84,
     "R_DNF": 50
 }
-        with open(f'{SCORE_TABLE_PATH}score_table.json', 'w') as f:
+        with open(f'{SCORE_TABLE_PATH}', 'w') as f:
             json.dump(scoring_board,f,indent=4)
 
     # users_db
-
-    with open(f'{USERS_DB_PATH}users_db.json', 'r') as f:
-        users_db = json.load(f)
-
+    users_db = {}
+    try:
+        with open(f'{USERS_DB_PATH}', 'r') as f:
+            users_db = json.load(f)
+    except FileNotFoundError:
+        logger.warning("NO USERS_DB_JSON")
+        with open(f'{USERS_DB_PATH}', 'w') as f:
+            json.dump(users_db,f,indent=4)
     
 
     # collect users
@@ -347,21 +340,30 @@ async def eval(ctx:Interaction):
                     #logger.info(f"{guessed_driver_name} == {driver_name}")
                     # for every guess 
                     if guessed_driver_name == driver_name:
+                        #logger.info(f"\n\n{users_db =}\n\n")
                         point = scoring_board[race_type] # each race_type's score
                         logger.info(f"MATCH! {user_name}: {race_type},{driver_name} - {point} point")
-                        logger.info(f"{race_id = }")
+                        await channel.send(f"{user_name}: {race_type} - {driver_name} -> {point} point")
+                        if str(user_id) not in users_db:                            
+                            users_db[str(user_id)] = {"user_name": user_name,"round_score": {},"total_points": 0}
                         if str(race_id) not in users_db[str(user_id)]["round_score"]:
+                            
                             users_db[str(user_id)]["round_score"][str(race_id)] = {}
                         if "date" not in users_db[str(user_id)]["round_score"][str(race_id)]:
                             users_db[str(user_id)]["round_score"][str(race_id)]["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
                         if "location" not in users_db[str(user_id)]["round_score"][str(race_id)]:
                             users_db[str(user_id)]["round_score"][str(race_id)]["location"] = race_name
+                        #logger.info(f"BEFORE SCORE BOARD APPEND: {users_db[str(user_id)]['round_score'][str(race_id)] = }")
                         if "score_board" not in users_db[str(user_id)]["round_score"][str(race_id)]:
+                            #logger.warning("Score board wasnt in json")
                             users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = {}
-                        # but not for points, to restrict overwriting guesses
+                        # but not change for points, to restrict overwriting guesses
+                        #logger.info(f'{users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = }')
+                        #logger.info(f"{user_id = } {race_id = } {race_type = }")
                         users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][race_type] = point # if not DNF
+                        #logger.info(f'{users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = }')
     
-    with open(f'{USERS_DB_PATH}users_db.json', 'w') as f:
+    with open(f'{USERS_DB_PATH}', 'w') as f:
         json.dump(users_db,f,indent=4)
 
     logger.info("Dumped users_db")
@@ -378,7 +380,7 @@ async def setdate(interaction:Interaction, *, date_input:str):
             # set_date 2023 09 16
             await interaction.response.send_message(f"Race date set to: {parsed_date.strftime('%Y-%m-%d %H:%M:%S')}")
             logger.info(f"Race date set to: {parsed_date.strftime('%Y-%m-%d %H:%M:%S')}")
-            with open(f"{UPCOMING_DATE_PATH}upcoming_date","w") as f:
+            with open(f"{UPCOMING_DATE_PATH}","w") as f:
                 f.write(parsed_date.strftime('%Y-%m-%d %H:%M:%S'))
         else:
             await interaction.response.send_message("Invalid date format. Please use a valid date format.")
@@ -395,15 +397,6 @@ async def results(ctx:Interaction):
     await ctx.response.send_message(pretty_json)
 
 
-@bot.tree.command(name="todo",description="please do these tests")
-async def todo(ctx:Interaction):
-    tutorial = """
-1. Check showresults if its correct
-2. Guess as many as possible
-3. Maybe try glitching it
-"""
-    await ctx.response.send_message(tutorial)
-
 @bot.tree.command(name="rules",description="-")
 async def rules(interaction:Interaction):
     rule_book = """
@@ -419,24 +412,24 @@ async def getlogs(interaction:Interaction, num_of_lines:int=500):
     """ send logs as pdf to report"""
     logger.info(f"getlogs with {num_of_lines} lines")
     try:
-        with open(f"{LOGS_PATH}botlogs.log", 'r') as file:
+        with open(f"{LOGS_PATH}", 'r') as file:
             lines = file.readlines()[-(num_of_lines):]
     except Exception as e:
         logger.info(e)
     logger.info(f"read lines")
-    with open(f"{LOGS_PATH}botlogs_extract.md", 'w') as file:
+    with open(f"{BOT_LOGS_EXT_MD_PATH}", 'w') as file:
         for line in lines:
             file.write(line)
     logger.info(f"botlogs_extract.md populated")
-    cmd = f'pandoc {LOGS_PATH}botlogs_extract.md -o {UPLOADS_PATH}botlogs_extract_{num_of_lines}.pdf'
+    cmd = f'pandoc {BOT_LOGS_EXT_MD_PATH} -o {BOT_LOGS_EXT_MD_PATH}_{num_of_lines}.pdf'
     os.system(cmd)        
-    await interaction.response.send_message(file=discord.File(UPLOADS_PATH+"botlogs_extract_"+str(num_of_lines)+".pdf"),delete_after=6)
+    await interaction.response.send_message(file=discord.File(BOT_LOGS_EXT_PDF_PATH+"_"+str(num_of_lines)+".pdf"),delete_after=6)
 
     # only send back last N number of lines to reduce file size
 
-@bot.tree.command(name="my_history",description="-")
+@bot.tree.command(name="myguesses",description="-")
 async def myguess(ctx:discord.Interaction,username:str=""):
-    with open(f"{GUESS_DB_PATH}guess_db.json", "r") as f:
+    with open(f"{GUESS_DB_PATH}", "r") as f:
             guesses_database = json.load(f)
     user_guesses = f1_data.pd.DataFrame.from_dict(guesses_database, orient='index')
     user_guesses.reset_index(inplace=True)
@@ -450,23 +443,54 @@ async def myguess(ctx:discord.Interaction,username:str=""):
         user_name = ctx.user.name
     cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user_name]
 
+    race_name = f1_module.next_race_details["name"]
+    next_race_id = str(f1_module.next_race_details["id"])
     cur_user_unique = cur_user.drop_duplicates(subset=['race_type'])
     cur_user_unique.set_index('race_type', inplace=True)
     cur_user_unique = cur_user_unique.sort_values(by='race_type')
+    cur_user_unique = cur_user_unique[cur_user_unique['race_id'] == next_race_id]
     logger.info(cur_user_unique)
-    race_name = f1_module.next_race_details["name"]
-    with open(f"{UPLOADS_PATH}user_guesses_list.md",'w') as f:
+    
+    with open(f"{USER_GUESS_HISTORY_PATH}",'w') as f:
         f.write(f"### {'&nbsp;'*11} {user_name}'s guesses for {race_name} {datetime.datetime.now().year}\n")
         f.write(cur_user_unique['driver_name'].to_markdown())
     
-    cmd = f'pandoc {UPLOADS_PATH}user_guesses_list.md -o {UPLOADS_PATH}user_guesses_list.pdf'
-    cmd2 = f'pdftoppm {UPLOADS_PATH}user_guesses_list.pdf {UPLOADS_PATH}user_guesses_list -png'
-    cmd3 = f'convert {UPLOADS_PATH}user_guesses_list-1.png -crop 500x500+350+235 {UPLOADS_PATH}user_guesses_list_zoomed.png'
+    cmd = f'pandoc {USER_GUESS_HISTORY_PATH} -o {USER_GUESS_HISTORY_PDF_PATH}.pdf'
+    cmd2 = f'pdftoppm {USER_GUESS_HISTORY_PDF_PATH}.pdf {USER_GUESS_HISTORY_PDF_PATH} -png'
+    cmd3 = f'convert {USER_GUESS_HISTORY_PDF_PATH}-1.png -crop 500x500+350+235 {USER_GUESS_HISTORY_PDF_PATH}_zoomed.png'
     os.system(cmd)
     os.system(cmd2)
     os.system(cmd3)
 
-    await ctx.response.send_message(file=discord.File(f"{UPLOADS_PATH}user_guesses_list_zoomed.png"))
+    await ctx.response.send_message(file=discord.File(f"{USER_GUESS_HISTORY_PDF_PATH}_zoomed.png"))
+
+@bot.tree.command(name="mypoints",description="-")
+async def mypoints(ctx:discord.Interaction,username:str=""):
+    users_db = {}
+    user_name = ""
+    if username:
+        user_name = username
+    else:   
+        user_name = ctx.user.name
+    with open(f"{USERS_DB_PATH}", "r") as f:
+            users_db = json.load(f)
+    cur_user_db = users_db[str(ctx.user.id)]
+    prev_race_id = str(f1_module.prev_race_details["id"])
+    prev_race_name = f1_module.prev_race_details["name"]
+    user_score = cur_user_db["round_score"][prev_race_id]["score_board"]
+    user_score_df = f1_data.pd.DataFrame.from_dict(user_score,orient='index')
+    user_score_df.rename(columns={0: 'Point'}, inplace=True)
+    logger.info(f"{user_name = } {prev_race_name = } {user_score_df = }")
+    with open(f"{USER_POINT_HISTORY_PATH}",'w') as f:
+        f.write(f"### {'&nbsp;'*11} {user_name}'s score for {prev_race_name} {datetime.datetime.now().year}\n")
+        f.write(user_score_df.to_markdown())
+    cmd = f'pandoc {USER_POINT_HISTORY_PATH} -o {USER_POINT_HISTORY_PDF_PATH}.pdf'
+    cmd2 = f'pdftoppm {USER_POINT_HISTORY_PDF_PATH}.pdf {USER_POINT_HISTORY_PDF_PATH} -png'
+    cmd3 = f'convert {USER_POINT_HISTORY_PDF_PATH}-1.png -crop 500x500+350+235 {USER_POINT_HISTORY_PDF_PATH}_zoomed.png'
+    os.system(cmd)
+    os.system(cmd2)
+    os.system(cmd3)
+    await ctx.response.send_message(file=discord.File(f"{USER_POINT_HISTORY_PDF_PATH}_zoomed.png"))
 
 #--------< Funny Functions aka Easter Eggs >----#
 
@@ -481,28 +505,48 @@ async def dadjoke(ctx:Interaction):
 async def whoami(ctx:Interaction):
     await ctx.response.send_message(f"You are {ctx.user.name},\nHey <@{ctx.user.id}>")
 
+@bot.tree.command(name="when_is_next",description="-")
+async def when_next(ctx:Interaction):
+    next_first_date = f1_module.next_grand_prix_schedule["practice-1"]
+    await ctx.response.send_message(f"Next event starts at {next_first_date[:-10]}",silent=True)
+
 @bot.tree.command(name="hello",description="-")
 async def hello(ctx:Interaction):
     await ctx.response.send_message("Hello there")
 
+@bot.tree.command(name="help",description="-")
+async def embed_test(ctx:Interaction):
+    descr = f"First, take your guesses by **/guess**\n\
+Then wait until the race completes\n\
+Finally evaluate your score by **/eval**\n\
+In the meanwhile,\n\
+you can see your guess by **/myguesses**\n\
+and you can see your point by **/mypoints**\n\
+And of course invoke many *funny* commands as well\n\
+\nGood luck! 😁🏁"
+    embed=discord.Embed(title="Tutorial",
+                        description=descr,
+                        color=0xFF5733)
+    await ctx.response.send_message(embed=embed)
+
 @bot.tree.command(name="pina",description="fúú, te kibaszott perverz")
 async def pina(ctx:Interaction):
-    await ctx.response.send_message("Itt egy titkos pina csak neked: ()",ephemeral=True)
+    await ctx.response.send_message("Itt egy titkos pina csak neked: || () ||",ephemeral=True)
 
 @bot.tree.command(name="fasz",description="fúú, te kibaszott perverz")
 async def fasz(ctx:Interaction):
-    await ctx.response.send_message("Itt egy titkos fasz csak neked: 8===Đ",ephemeral=True)
+    await ctx.response.send_message("Itt egy titkos fasz csak neked: || 8===Đ ||",ephemeral=True)
 
 @bot.tree.command(name="jo_isten_kuldte_hozzank_le",description="-")
 async def vitya(ctx:Interaction):
-    await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"vitya.png"))
+    await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"vitya.png"),silent=True)
 
 @bot.tree.command(name="lajos",description="-")
 async def lajos(ctx:Interaction, pia:str="palinka"):
     await ctx.response.defer()
     channel = bot.get_channel(CHANNEL_ID)
     logger.info("lajos már régen volt az neten bazdmeg")
-    script = """- Szia Lajos. 👋
+    script = f"""- Szia Lajos. 👋
 -       Szia bazdmeg! Kutyáidat sétáltatod?
 - Hát bazdmeg
 -                 Ilyen...ilyen szerelésbe?
@@ -517,7 +561,7 @@ async def lajos(ctx:Interaction, pia:str="palinka"):
 - Szia 👋 """
     if pia == "palinka":
         for line in script.split('\n'):
-            await channel.send(line)
+            await channel.send(line,silent=True)
     elif pia == "geci":
         await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi? ||")
     await ctx.followup.send("---")
