@@ -1,16 +1,25 @@
 import json
 
-UPCOMING_DATE_PATH = "resources/data/"
-RESULTS_PATH = "resources/data/"
-FETCH_LOG_PATH = "resources/data/"
-TOKEN_PATH = "resources/token/"
-PASSW_PATH = "resources/password/"
-UPLOADS_PATH = "resources/uploads/"
-GUESS_DB_PATH = "resources/inventory/"
-SCORE_TABLE_PATH = "resources/inventory/"
-USERS_DB_PATH = "resources/inventory/"
-LOGS_PATH = "resources/logs/"
-MANIFEST_PATH = "docs/manifest/"
+#* INCLUDES FILES AS WELL
+UPCOMING_DATE_PATH =    "resources/data/upcoming_date"
+RESULTS_PATH =          "resources/data/results.json"
+FETCH_LOG_PATH =        "resources/data/fetch_log.json"
+YEAR_SCHEDULE_PATH =    "resources/data/year_dates.json"
+NEXT_EVENT_DATES_PATH = "resources/data/next_event_details.json"
+TOKEN_PATH =        "resources/token/token"
+PASSW_PATH =        "resources/password/passw"
+UPLOADS_PATH =          "resources/uploads/"
+USER_GUESS_HISTORY_PATH =    "resources/uploads/user_guess_history.md"
+USER_GUESS_HISTORY_PDF_PATH =    "resources/uploads/user_guess_history"
+USER_POINT_HISTORY_PATH =    "resources/uploads/user_point_history.md"
+USER_POINT_HISTORY_PDF_PATH =    "resources/uploads/user_point_history"
+GUESS_DB_PATH =     "resources/inventory/guess_db.json"
+SCORE_TABLE_PATH =  "resources/inventory/score_table.json"
+USERS_DB_PATH =     "resources/inventory/users_db.json"
+LOGS_PATH =             "resources/logs/botlogs.log"
+BOT_LOGS_EXT_MD_PATH =     "resources/logs/botlogs_extract.md"
+BOT_LOGS_EXT_PDF_PATH =     "resources/logs/botlogs_extract"
+MANIFEST_PATH =     "docs/manifest/manifest.json"
 
 CHANNEL_ID = 1078427611597906004
 
