@@ -66,19 +66,19 @@ class F1DataFetcher:
         "FP1_1ST": "",
         "FP2_1ST": "",
         "FP3_1ST": "",
-        "SPR_SHO": "",
-        "SPR_RACE": "",
-        "QUAL_1ST": "",
-        "QUAL_2ND": "",
-        "QUAL_3RD": "",
-        "QUAL_BOTR": "",
-        "RACE_1ST": "",
-        "RACE_2ND": "",
-        "RACE_3RD": "",
-        "RACE_BOTR": "",
+        "S_SHO": "",
+        "S_RACE": "",
+        "Q_1ST": "",
+        "Q_2ND": "",
+        "Q_3RD": "",
+        "Q_BOTR": "",
+        "R_1ST": "",
+        "R_2ND": "",
+        "R_3RD": "",
+        "R_BOTR": "",
         "DOTD": "",
-        "RACE_FAST": "",
-        "RACE_DNF": ""
+        "R_FAST": "",
+        "R_DNF": ""
         }
 
     #* New Structure:
@@ -349,15 +349,15 @@ class F1DataFetcher:
         self.fetch_dotd_results()
         self.fetch_fastest_results()
         for fpn in range(1,4):
-            exist = f"Practice {fpn}"
+            race_type = f"practice-{fpn}"
             if fpn == 1:
                 code = "FP1_1ST"
             elif fpn == 2:
-                code = "FP_2ND"
+                code = "FP2_1ST"
             else:
-                code = "FP_3RD"
-            if self.current_events_schedule[exist]:
-                self.fetch_fpn_results(exist,code)
+                code = "FP3_1ST"
+            if self.current_events_schedule[race_type]:
+                self.fetch_fpn_results(race_type,code)
         logger.info("FETCHING FINISHED")
         
     def request_and_get_soap(self,url) -> BeautifulSoup:
@@ -452,7 +452,7 @@ class F1DataFetcher:
         prev_sprint_table_clean = [[*arr[:2], join_names(arr), *arr[5:]] for arr in prev_sprint_table_filtered]
         prev_sprint_table_df = pd.DataFrame(prev_sprint_table_clean, columns=prev_sprint_table_header)
         #logger.info(f"{prev_sprint_table_df = }")
-        self.results_board["SPR_RACE"] = prev_sprint_table_df.loc[0]['Driver']
+        self.results_board["S_RACE"] = prev_sprint_table_df.loc[0]['Driver']
 
     def fetch_sprint_shootout_results(self):
         """Fetch sprint Shootout"""
@@ -467,7 +467,7 @@ class F1DataFetcher:
         prev_shootout_table_clean = [[*arr[:2], join_names(arr), *arr[5:]] for arr in prev_shootout_table_filtered]
         prev_shootout_table_df = pd.DataFrame(prev_shootout_table_clean, columns=prev_shootout_table_header)
         #logger.info(f"{prev_shootout_table_df = }")
-        self.results_board["SPR_SO"] = prev_shootout_table_df.loc[0]['Driver']
+        self.results_board["S_SHO"] = prev_shootout_table_df.loc[0]['Driver']
 
     def fetch_dotd_results(self):
         # driver of the day
