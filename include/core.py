@@ -421,7 +421,7 @@ async def getlogs(interaction:Interaction, num_of_lines:int=500):
         for line in lines:
             file.write(line)
     logger.info(f"botlogs_extract.md populated")
-    cmd = f'pandoc {BOT_LOGS_EXT_MD_PATH} -o {BOT_LOGS_EXT_MD_PATH}_{num_of_lines}.pdf'
+    cmd = f'pandoc {BOT_LOGS_EXT_MD_PATH} -o {BOT_LOGS_EXT_PDF_PATH}_{num_of_lines}.pdf'
     os.system(cmd)        
     await interaction.response.send_message(file=discord.File(BOT_LOGS_EXT_PDF_PATH+"_"+str(num_of_lines)+".pdf"),delete_after=6)
 
