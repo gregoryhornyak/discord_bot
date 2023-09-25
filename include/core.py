@@ -43,16 +43,17 @@ f1_module = f1_data.F1DataFetcher()
 @bot.event
 async def on_ready():
     logger.info(f'Logged in as {bot.user}\n------\n')
-    bot.tree.copy_global_to(guild=discord.Object(id=1078427611597906001))
-    await bot.tree.sync(guild=discord.Object(id=1078427611597906001))
+    bot.tree.copy_global_to(guild=discord.Object(id=SERVER_ID))
+    await bot.tree.sync(guild=discord.Object(id=SERVER_ID))
     channel = bot.get_channel(CHANNEL_ID)
-    #! MESSAGE DELETE SECTION
+    #* MESSAGE DELETE SECTION
     history_gen = channel.history(limit=1)
     list_of_messages = []
     async for result in history_gen:
         message = await channel.fetch_message(result.id)
-        if message.content in [BOT_SHUTDOWN_UPGRD_MESSAGE,BOT_START_DETAILS_MESSAGE,BOT_START_SHORT_MESSAGE]:
-            list_of_messages.append(message)
+        for line in [BOT_SHUTDOWN_UPGRD_MESSAGE,BOT_START_DETAILS_MESSAGE_LINE,BOT_START_SHORT_MESSAGE]:
+            if line in message.content:
+                list_of_messages.append(message)
     await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
     man_version = get_manifest_version_info()
 
@@ -98,41 +99,21 @@ def get_manifest_version_info():
     
 async def schedule_daily_message():
     loop_counter = 0
-    upcoming_date = ""
     while True:
         channel = bot.get_channel(CHANNEL_ID)
-        try:
-            with open(f"{UPCOMING_DATE_PATH}", "r") as f:
-                upcoming_date = f.readline()
-            upcoming_date = parse(upcoming_date)
-            #logger.info(f"Date once set for: {upcoming_date}")
-        except FileNotFoundError:
-            logger.info("Not found")
-            # do something
-
         now = datetime.datetime.now()
         next_first_date = f1_module.next_grand_prix_schedule["practice-1"]
         next_first_date_day = datetime.datetime.strptime(next_first_date,'%Y-%m-%d %H:%M:%S.%f').day
-        
-        # race alert
-        #   less than a day
-        """
-        if now.day <= upcoming_date.day:
-            logger.info(f"Past race date")
-        if now.day+1 >= upcoming_date.day:
-            logger.info(f"date is tomorrow!")
-            await channel.send("@everyone the race is due!",delete_after=3)
-        #   less than 3 days
-        elif now.day+3 >= upcoming_date.day:
-            logger.info(f"3 days until race!")
-            await channel.send("@everyone 3 days until the race!",delete_after=3)
-        """
+        next_first_date_month = datetime.datetime.strptime(next_first_date,'%Y-%m-%d %H:%M:%S.%f').month
         # morning schedule: auto-testing, fetching
         if now.hour == 8 and now.minute == 5:
-            await channel.send(f"Next event at {next_first_date}",silent=True)
+            await channel.send(f"Next event at {next_first_date[:-10]}",silent=True)
             logger.info(f"Morning routine: {now.day} to {next_first_date_day}?")
-            if now.day+3 >= next_first_date_day:
+            if now.day+3 >= next_first_date_day and now.month == next_first_date_month:
                 await channel.send(f"Next event in 3 days",silent=True)
+            if now.month == next_first_date_month:
+                if now.day+10 >= next_first_date_day:
+                    await channel.send(f"Next event in 10 days",silent=True)
         loop_counter += 1
         await asyncio.sleep(40)
 
@@ -169,8 +150,8 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     drivers_info = f1_module.get_drivers_details()
     next_race_id = f1_module.next_race_details['id']
     next_race_name = f1_module.next_race_details['name']
-    results_board = f1_module.results_board
-    race_types_list = [key for key, value in results_board.items() if value != ""]
+    race_types_list = f1_module.get_race_types()
+    logger.warning(f"{race_types_list = }")
 
     select_race = discord.ui.Select(placeholder="Choose a race!",
                                     options=[discord.SelectOption(
@@ -231,8 +212,6 @@ async def eval(ctx:Interaction):
     # headers: | Pos No Driver Car Laps Time/Retired PTS
     await ctx.response.defer()
     scores_json = f1_module.get_all_results()
-    logger.info(f"scores_json: {scores_json}")
-    #await interaction.response.send_message(scores_json,delete_after=3)
 
     #await interaction.response.send_message(file=discord.File(UPLOADS_PATH+"verstappen.mp3"))
 
@@ -316,7 +295,6 @@ async def eval(ctx:Interaction):
     # collect users
 
     members = get_discord_members(ctx)
-    logger.info(f"{members = }")
 
     # --- all resources are collected
 

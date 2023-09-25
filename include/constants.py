@@ -22,10 +22,12 @@ BOT_LOGS_EXT_PDF_PATH =     "resources/logs/botlogs_extract"
 MANIFEST_PATH =     "docs/manifest/manifest.json"
 
 CHANNEL_ID = 1078427611597906004
+SERVER_ID = 1078427611597906001
 
 BOT_SHUTDOWN_UPGRD_MESSAGE = "Bot is shutting down and will be upgraded..."
 BOT_START_DETAILS_MESSAGE = f"bot_name\n\
 vversion [latest:latest_ver]\n\
 is now running...\n\
 Latest update: latest_update"
+BOT_START_DETAILS_MESSAGE_LINE = "Latest update"
 BOT_START_SHORT_MESSAGE = "Bot is running..."
