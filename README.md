@@ -41,7 +41,7 @@
 - [Commands](docs/commands.md)
 - [Categories](docs/categories.md)
 
-+ [Public inventory](https://github.com/gregoryhornyak/FOneBot_PublicInventory#fonebot_publicinventory)
+:heavy_plus_sign: [Public inventory](https://github.com/gregoryhornyak/FOneBot_PublicInventory#fonebot_publicinventory)
 
 ---
 
