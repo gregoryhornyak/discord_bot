@@ -59,5 +59,3 @@
 J. Gergely Hornyak as **developer**
 
 Gabor Korecz with **technical support** and **testing**
-
-Marton Banfi as **tester**
