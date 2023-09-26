@@ -31,3 +31,5 @@ is now running...\n\
 Latest update: latest_update"
 BOT_START_DETAILS_MESSAGE_LINE = "Latest update"
 BOT_START_SHORT_MESSAGE = "Bot is running..."
+
+BOT_STATE = "BETA" # TEST | ALPHA | BETA | DEPLOYMENT

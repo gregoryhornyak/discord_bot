@@ -92,6 +92,10 @@ def init_stage(cur_dir):
         else:
             logger.info(f"Created: {dir} dir")
 
+@bot.tree.command(name="status",description="get bot status")
+async def bot_state(ctx:Interaction):
+    await ctx.response.send_message(f"{BOT_STATE = }")
+
 def get_manifest_version_info():
     git_link = "https://github.com/gregoryhornyak/discord_bot/blob/master/docs/manifest/manifest.json?raw=true"
     manifest = f1_data.requests.get(git_link).json()
@@ -580,6 +584,8 @@ async def stop(ctx:Interaction):
     """Stops and disconnects the bot from voice"""
     await ctx.guild.voice_client.disconnect()
     #await ctx.followup.send("---",ephemeral=True)
+
+
 
 #----< Main Function Init >----#
 

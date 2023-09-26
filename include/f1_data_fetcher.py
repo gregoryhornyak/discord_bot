@@ -100,6 +100,7 @@ class F1DataFetcher:
 
 
     def __init__(self):
+        logger.info(self.get_point_table())
         self.daily_fetch()
 
     def daily_fetch(self):
@@ -515,3 +516,9 @@ class F1DataFetcher:
         return_list = [k for k,v in self.results_board.items() if v!=""]
         
         return return_list
+    
+    def get_point_table(self):
+        git_link = "https://raw.githubusercontent.com/gregoryhornyak/FOneBot_PublicInventory/master/score_sheet.json"
+        score_sheet = requests.get(git_link).json()
+        # check content
+        return score_sheet
