@@ -288,7 +288,7 @@ class F1DataFetcher:
         except FileNotFoundError:
             
             with open(f"{RESULTS_PATH}","w") as f:
-                f.write("")
+                json.dump(results_json,f,indent=4)
 
         else:
             self.results_board = results_json[self.prev_race_details["id"]]
@@ -296,7 +296,7 @@ class F1DataFetcher:
 
     def update_urls(self) -> None:
         # Replace placeholders with values using regular expressions
-        
+        """
         #! FOR TESTING PURPOSES OF PREV RACES, USE THIS FUNC
 
         custom_race_id = "1207"
@@ -319,7 +319,7 @@ class F1DataFetcher:
         return 0
 
         #! FOR TESTING PURPOSES ONLY
-    
+        """
         for key,url in self.formula_one_urls.items():
             url_updated_id = re.sub(r'prev_race_id', str(self.prev_race_details["id"]), url)
             url_updated_id_name = re.sub(r'prev_race_name', self.prev_race_details["name"], url_updated_id)
