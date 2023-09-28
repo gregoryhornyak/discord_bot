@@ -9,25 +9,34 @@ from include.database_manager import datetime
 
 class F1DataFetcher:
 
+    #* includes:
+    #*
+    #* - prev and next race details
+    #* - all the formula one urls
+    #* - the grand prixes urls for the year
+    #* - list of next prix's events and dates
+    #* - prev event's schedule
+    #* - the results from the previous
+    #*
+    #*
+
     #! STANDARD: JSON FILES
 
-    # class variables:
-    ## race details
+    
+    #* race details
     prev_race_details = {
-        "id": 0,
+        "id": "",
         "name": ""
     }
     next_race_details = {
-        "id": 0,
+        "id": "",
         "name": ""
     }
 
-    free_prac_ser_num = 1
+    #* common lists
+    best_three = ['FERRARI','RED BULL RACING HONDA RBPT','MERCEDES']
 
-    ## common lists
-    best_three = ['FERRARI','RED BULL RACING HONDA RBPT','MERCEDES'] # refine, as it doesnt work
-
-    ## urls
+    #* urls
     formula_one_urls = {
         "all_races_url":        "https://www.formula1.com/en/results.html/2023/races.html",
         "next_race_schedule":   "https://www.formula1.com/en/racing/2023/next_race_name.html",
@@ -44,13 +53,15 @@ class F1DataFetcher:
         "driver_details_url":   "https://www.formula1.com/en/results.html/2023/drivers.html"
     }
 
-    grand_prix_urls = {}
+    grand_prix_calendar_urls = {}
 
-    next_grand_prix_schedule = {}
+    next_grand_prix_events = {}
 
-    # current race schedules
+    guess_schedule = {}
 
-    current_events_schedule = {
+    #* current race schedules
+
+    prev_events_schedule = {
         "practice-1": False,
         "practice-2": False,
         "practice-3": False,
@@ -60,21 +71,21 @@ class F1DataFetcher:
         "race": False,
     }
 
-    ## results board 
+    #* results board 
 
     results_board = {
-        "FP1_1ST": "",
-        "FP2_1ST": "",
-        "FP3_1ST": "",
-        "S_SHO": "",
-        "S_RACE": "",
-        "Q_1ST": "",
-        "Q_2ND": "",
-        "Q_3RD": "",
+        "FP1": "",
+        "FP2": "",
+        "FP3": "",
+        "SO": "",
+        "S": "",
+        "Q1": "",
+        "Q2": "",
+        "Q3": "",
         "Q_BOTR": "",
-        "R_1ST": "",
-        "R_2ND": "",
-        "R_3RD": "",
+        "R1": "",
+        "R2": "",
+        "R3": "",
         "R_BOTR": "",
         "DOTD": "",
         "R_FAST": "",
@@ -100,67 +111,71 @@ class F1DataFetcher:
 
 
     def __init__(self):
-        logger.info(self.get_point_table())
         self.daily_fetch()
 
     def daily_fetch(self):
         """once every day fetch the data"""
+        logger.info("daily fetch started")
         start_fetch,fetch_log = self.check_fetch_log() #! MUST
         self.get_prev_race_id_and_name() #! MUST
         self.get_next_race_id_and_name() #! MUST
         self.update_urls() #! MUST
         self.check_yearly_event_schedule_url()
-        self.get_next_event_details(str(self.next_race_details["id"]),self.grand_prix_urls[str(self.next_race_details["id"])])
+        self.get_next_grand_prix_details()
 
-        if start_fetch:
-            self.check_urls_working() #! SHOULD
+        if start_fetch: # no results exists / out of date
+            self.sort_working_urls() #! SHOULD
+            self.update_guess_schedule()
             self.fetch_all_into_cache() #? IF not fetched today
             self.save_results_to_json() #? IF not fetched today
         else:
             self.load_results()
+
         if fetch_log:
-            
             self.create_fetch_log(fetch_log)
+
+        logger.debug("TEST DETAILS:")
+        logger.debug(f"{self.prev_race_details = }")
+        logger.debug(f"{self.next_race_details = }")
+        logger.debug(f"{self.formula_one_urls['next_race_schedule'] = }")
 
     def create_fetch_log(self,fetch_log):
         with open(f"{FETCH_LOG_PATH}","w") as f:
             json.dump(fetch_log,f,indent=4)
 
     def check_fetch_log(self) -> bool:
-        fetch_log = {}
+        logger.info("check_fetch_log started")
+        fetch_log = {} # empty
         missing_results_json = False
         start_fetch = False
         fetch_date = None
 
         #* see if fetched today 
         try:
+
             with open(f"{FETCH_LOG_PATH}","r") as f:
-                fetch_log = json.load(f)
+                fetch_log = json.load(f) # loaded
 
         except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
             
-
             missing_results_json = True
             start_fetch = True
             fetch_date = datetime.datetime.now()
-            fetch_log['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-            #self.create_fetch_log(fetch_log)
+            fetch_log['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") # loaded
         
         else:
-            
+            # if it was logged
             fetch_date = datetime.datetime.strptime(fetch_log['date'], "%Y-%m-%d %H:%M:%S.%f")
 
         finally:
+
             if fetch_date.day != datetime.datetime.now().day or missing_results_json:
-                
                 #todo START FETCHING
                 start_fetch = True
-                fetch_log['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
-                
+                fetch_log['date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f") #
                 with open(f"{FETCH_LOG_PATH}","w") as f:
                     json.dump(fetch_log,f,indent=4)
 
-        #
         return start_fetch,fetch_log
 
     def save_results_to_json(self):
@@ -179,7 +194,7 @@ class F1DataFetcher:
         all_races_ids = [name.get('href') for name in all_races_ids_data]
         all_races_ids_text = [name.split('/')[5] for name in all_races_ids]
 
-        self.prev_race_details["id"] = all_races_ids_text[-1]
+        self.prev_race_details["id"] = str(all_races_ids_text[-1])
         self.prev_race_details["name"] = all_races_names[-1]
         
 
@@ -198,11 +213,11 @@ class F1DataFetcher:
         all_races_names_divided = {race.split('/')[0]: process_race_name(race.split('/')[1]) for race in all_races_names}
         next_key = None
         for key in sorted(all_races_names_divided.keys()):
-            if key > str(self.prev_race_details["id"]): # if its increasing
+            if key > self.prev_race_details["id"]: # if its increasing
                 next_key = key
                 break
 
-        self.next_race_details["id"] = next_key
+        self.next_race_details["id"] = str(next_key)
         self.next_race_details["name"] = all_races_names_divided[next_key]
         
 
@@ -212,7 +227,7 @@ class F1DataFetcher:
             | else: TRUE """
         try:
             with open(f"{YEAR_SCHEDULE_PATH}","r") as f:
-                self.grand_prix_urls = json.load(f)
+                self.grand_prix_calendar_urls = json.load(f)
         except FileNotFoundError:
             
             self.get_yearly_schedule_urls()
@@ -230,10 +245,11 @@ class F1DataFetcher:
         next_event_id_and_url_json = {event_id: event_url for event_url, event_id in next_event_id_and_url}
         with open(f"{YEAR_SCHEDULE_PATH}","w") as f:
             json.dump(next_event_id_and_url_json,f,indent=4)
-        self.grand_prix_urls = next_event_id_and_url_json
+        self.grand_prix_calendar_urls = next_event_id_and_url_json
 
-    def get_next_event_details(self,race_id:str,url):
-        url= str(url+"#track-time")
+    def get_next_grand_prix_details(self):
+        race_id = self.next_race_details["id"]
+        url= str(self.grand_prix_calendar_urls[self.next_race_details["id"]]+"#track-time")
         event_soap = self.request_and_get_soap(url)
         event_soap_finds = event_soap.find_all('div', class_=lambda x: x and x.startswith("js-"))
         event_soap_race_types_classes = [name.get('class')[1] for name in event_soap_finds]
@@ -251,12 +267,14 @@ class F1DataFetcher:
             datetime_obj = datetime.datetime.strptime(event_start_date[0], '%Y-%m-%dT%H:%M:%S')
             datetime_obj = datetime.datetime.strftime(datetime_obj,'%Y-%m-%d %H:%M:%S.%f')
             grand_prix_schedule[str(race_id)][class_name_pretty] = datetime_obj
-        self.next_grand_prix_schedule = grand_prix_schedule[str(race_id)]
-        
-        with open(f"{NEXT_EVENT_DATES_PATH}","w") as f:
-            json.dump(grand_prix_schedule,f,indent=4)
-        
-        
+
+        #! TESTING:
+        #* next_event_details.json is loaded to replace true times
+        temp_json = {}
+        with open(f"{NEXT_EVENT_DATES_PATH}","r") as f:
+            temp_json = json.load(f)
+        self.next_grand_prix_events = temp_json[str(race_id)]
+        #self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
 
     def load_results(self):
         # see if results are existend
@@ -277,27 +295,28 @@ class F1DataFetcher:
     def update_urls(self) -> None:
         # Replace placeholders with values using regular expressions
         
-
-        """
         #! FOR TESTING PURPOSES OF PREV RACES, USE THIS FUNC
 
-        custom_race_id = "1216"
-        custom_race_name = "belgium"
-        custom_next_race_name = ""
+        custom_race_id = "1207"
+        custom_race_name = "azerbaijan"
+        custom_next_race_id = "1208"
+        custom_next_race_name = "miami"
 
         self.prev_race_details["id"] = custom_race_id
         self.prev_race_details["name"] = custom_race_name
 
-        for key,url in self.formula_one_urls_json.items():
+        self.next_race_details["id"] = custom_next_race_id
+        self.next_race_details["name"] = custom_next_race_name
+
+        for key,url in self.formula_one_urls.items():
             url_updated_id = re.sub(r'prev_race_id', custom_race_id, url)
             url_updated_id_name = re.sub(r'prev_race_name', custom_race_name, url_updated_id)
-            # if oen word: Capitalise
-            # if two words: separete by '-' -> Capitalise -> put '_' inbetween
-            url_updated_next_id_name = re.sub(r'next_race_name', custom_next_race_name, url_updated_id_name)
-            self.formula_one_urls_json[key] = url_updated_id_name
+            url_updated_next_id_name = re.sub(r'next_race_name', self.next_race_details["name"].capitalize(), url_updated_id_name)
+            self.formula_one_urls[key] = url_updated_next_id_name
         
         return 0
-        """
+
+        #! FOR TESTING PURPOSES ONLY
     
         for key,url in self.formula_one_urls.items():
             url_updated_id = re.sub(r'prev_race_id', str(self.prev_race_details["id"]), url)
@@ -306,11 +325,17 @@ class F1DataFetcher:
             self.formula_one_urls[key] = url_updated_next_id_name
         
 
-    def check_urls_working(self):
+    def sort_working_urls(self):
         for race_name in self.formula_one_urls.keys():
-            for cur_race_name in self.current_events_schedule.keys():
+            for cur_race_name in self.prev_events_schedule.keys():
                 if race_name == cur_race_name:
-                    self.current_events_schedule[cur_race_name] = self.event_in_schedule(cur_race_name,self.formula_one_urls[race_name])
+                    self.prev_events_schedule[cur_race_name] = self.event_in_schedule(cur_race_name,self.formula_one_urls[race_name])
+
+    def update_guess_schedule(self):
+        #have to overwrite previous one
+        next_grand_prix_events = self.next_grand_prix_events[self.next_race_details["id"]]
+        for race_type in next_grand_prix_events.keys():
+            self.guess_schedule[race_type] = False
 
     def event_in_schedule(self,event_name,event_url) -> bool:
         """try to find if there was an event"""
@@ -326,25 +351,20 @@ class F1DataFetcher:
 
     def fetch_all_into_cache(self):
         
-        if self.current_events_schedule["race"]: # true
+        if self.prev_events_schedule["race"]: # true
             self.fetch_race_results()
-        if self.current_events_schedule["qualifying"]:
+        if self.prev_events_schedule["qualifying"]:
             self.fetch_qual_results()
-        if self.current_events_schedule["sprint"]:
+        if self.prev_events_schedule["sprint"]:
             self.fetch_sprint_race_results()
-        if self.current_events_schedule["sprint-shootout"]:
+        if self.prev_events_schedule["sprint-shootout"]:
             self.fetch_sprint_shootout_results()
         self.fetch_dotd_results()
         self.fetch_fastest_results()
         for fpn in range(1,4):
             race_type = f"practice-{fpn}"
-            if fpn == 1:
-                code = "FP1_1ST"
-            elif fpn == 2:
-                code = "FP2_1ST"
-            else:
-                code = "FP3_1ST"
-            if self.current_events_schedule[race_type]:
+            code = f"FP{fpn}"
+            if self.prev_events_schedule[race_type]:
                 self.fetch_fpn_results(race_type,code)
         
         
@@ -370,9 +390,9 @@ class F1DataFetcher:
         prev_race_table_df = pd.DataFrame(prev_race_table_clean, columns=prev_race_table_header)
         #
         
-        self.results_board["R_1ST"] = prev_race_table_df.loc[0]['Driver']
-        self.results_board["R_2ND"] = prev_race_table_df.loc[1]['Driver']
-        self.results_board["R_3RD"] = prev_race_table_df.loc[2]['Driver']
+        self.results_board["R1"] = prev_race_table_df.loc[0]['Driver']
+        self.results_board["R2"] = prev_race_table_df.loc[1]['Driver']
+        self.results_board["R3"] = prev_race_table_df.loc[2]['Driver']
 
         for (driver, team) in (zip(prev_race_table_df['Driver'], prev_race_table_df['Car'])):
             if team.upper() not in self.best_three:
@@ -402,10 +422,9 @@ class F1DataFetcher:
         prev_qual_table_df = pd.DataFrame(prev_qual_table_clean, columns=prev_qual_table_header)
         #
         #
-
-        self.results_board["Q_1ST"] = prev_qual_table_df.loc[0]['Driver']
-        self.results_board["Q_2ND"] = prev_qual_table_df.loc[1]['Driver']
-        self.results_board["Q_3RD"] = prev_qual_table_df.loc[2]['Driver']
+        self.results_board["Q1"] = prev_qual_table_df.loc[0]['Driver']
+        self.results_board["Q2"] = prev_qual_table_df.loc[1]['Driver']
+        self.results_board["Q3"] = prev_qual_table_df.loc[2]['Driver']
 
         for (driver, team) in (zip(prev_qual_table_df['Driver'], prev_qual_table_df['Car'])):
             #
@@ -413,8 +432,6 @@ class F1DataFetcher:
                 #
                 self.results_board["Q_BOTR"] = driver
                 break
-
-        
 
     def fetch_fpn_results(self,race_type,race_type_short):
         """ find out FP1-3 results in previous race"""
@@ -428,10 +445,8 @@ class F1DataFetcher:
         join_names = self.join_names()
         prev_fpN_table_clean = [[*arr[:2], join_names(arr), *arr[5:]] for arr in prev_fpN_table_filtered]
         prev_fpN_table_df = pd.DataFrame(prev_fpN_table_clean, columns=prev_fpN_table_header)
-        #
         self.results_board[race_type_short] = prev_fpN_table_df.loc[0]['Driver']
 
-        
 
     def fetch_sprint_race_results(self):
         """find sprint results"""
@@ -446,7 +461,7 @@ class F1DataFetcher:
         prev_sprint_table_clean = [[*arr[:2], join_names(arr), *arr[5:]] for arr in prev_sprint_table_filtered]
         prev_sprint_table_df = pd.DataFrame(prev_sprint_table_clean, columns=prev_sprint_table_header)
         #
-        self.results_board["S_RACE"] = prev_sprint_table_df.loc[0]['Driver']
+        self.results_board["S"] = prev_sprint_table_df.loc[0]['Driver']
 
         
 
@@ -463,7 +478,7 @@ class F1DataFetcher:
         prev_shootout_table_clean = [[*arr[:2], join_names(arr), *arr[5:]] for arr in prev_shootout_table_filtered]
         prev_shootout_table_df = pd.DataFrame(prev_shootout_table_clean, columns=prev_shootout_table_header)
         #
-        self.results_board["S_SHO"] = prev_shootout_table_df.loc[0]['Driver']
+        self.results_board["SO"] = prev_shootout_table_df.loc[0]['Driver']
 
         
 
@@ -512,7 +527,7 @@ class F1DataFetcher:
         return drivers_info
 
     def get_race_types(self) -> list:
-        logger.warning(f"{self.results_board = }")
+        logger.info(f"{self.results_board = }")
         return_list = [k for k,v in self.results_board.items() if v!=""]
         
         return return_list
