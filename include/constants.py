@@ -20,6 +20,7 @@ LOGS_PATH =             "resources/logs/botlogs.log"
 BOT_LOGS_EXT_MD_PATH =     "resources/logs/botlogs_extract.md"
 BOT_LOGS_EXT_PDF_PATH =     "resources/logs/botlogs_extract"
 MANIFEST_PATH =     "docs/manifest/manifest.json"
+PROFILE_PICS_PATH = "resources/uploads/"
 
 CHANNEL_ID = 1078427611597906004
 SERVER_ID = 1078427611597906001
@@ -32,4 +33,12 @@ Latest update: latest_update"
 BOT_START_DETAILS_MESSAGE_LINE = "Latest update"
 BOT_START_SHORT_MESSAGE = "Bot is running..."
 
-BOT_STATE = "BETA" # TEST | ALPHA | BETA | DEPLOYMENT
+BOT_STATE = "TEST" # TEST | ALPHA | BETA | DEPLOYMENT
+
+BLACK_LISTED_PHRASES = ["Ne káromkodjál, mert pofán baszlak!",
+                 "Még egy ilyen és szájba kúrlak!",
+                 "De szépen beszélsz, hogy rohadjál meg!",
+                 "Anyád tanított így beszélni?"]
+
+SWEAR_WORDS = ["fasz", "bazdmeg", "geci", "kurva", "baszki", "segg", "pina"]
+GRATULATION_PHRASES = ["Bravo","Kudos","Superb"]
