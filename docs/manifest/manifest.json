@@ -1,5 +1,5 @@
 {
     "bot_name": "Formula One Discord Bot",
-    "version": "0.7.2 Open-Beta",
+    "version": "0.7.2 ~~Open-Beta~~TEST",
     "latest": "abs(dnf)"
 }
