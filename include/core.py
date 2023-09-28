@@ -46,6 +46,9 @@ async def on_message(ctx:Interaction):
         if did_swear:
             await ctx.channel.send(random.choice(BLACK_LISTED_PHRASES))
 
+# implement pause between upgrade shutdowns
+# read a manifest on how many minutes to stop for
+
 @bot.event
 async def on_ready():
     logger.info(f'Logged in as {bot.user}')

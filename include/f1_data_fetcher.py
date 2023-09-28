@@ -270,11 +270,13 @@ class F1DataFetcher:
 
         #! TESTING:
         #* next_event_details.json is loaded to replace true times
+        self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
+        """
         temp_json = {}
         with open(f"{NEXT_EVENT_DATES_PATH}","r") as f:
             temp_json = json.load(f)
         self.next_grand_prix_events = temp_json[str(race_id)]
-        #self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
+        """
 
     def load_results(self):
         # see if results are existend
