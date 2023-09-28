@@ -21,13 +21,12 @@ import asyncio
 from dateutil.parser import parse
 import subprocess
 
+from PIL import Image, ImageFont, ImageDraw
+import random
+
 ##
 ## TODO
-## 
-##  Implement Sprint results ✅
 ##
-##* DEFINE BOT STATES: IDLE / WAITING FOR RACE EVENT / TAKING GUESSES
-
 
 #----< Working directory >----#
 
@@ -41,8 +40,15 @@ bot = commands.Bot(command_prefix="/",intents=discord.Intents.all())
 f1_module = f1_data.F1DataFetcher()
 
 @bot.event
+async def on_message(ctx:Interaction):
+    if ctx.author.name != "lord_maldonado":
+        did_swear = [item for item in SWEAR_WORDS if item in ctx.content]
+        if did_swear:
+            await ctx.channel.send(random.choice(BLACK_LISTED_PHRASES))
+
+@bot.event
 async def on_ready():
-    logger.info(f'Logged in as {bot.user}\n------\n')
+    logger.info(f'Logged in as {bot.user}')
     bot.tree.copy_global_to(guild=discord.Object(id=SERVER_ID))
     await bot.tree.sync(guild=discord.Object(id=SERVER_ID))
     channel = bot.get_channel(CHANNEL_ID)
@@ -67,37 +73,21 @@ async def on_ready():
 
     await channel.send(boot_message,silent=True)
 
-    await bot.change_presence(activity=discord.Game(name="with your mom"))
+    await bot.change_presence(activity=discord.Game(name=f"in {BOT_STATE} mode"))
 
-    await asyncio.sleep(10)
+    await asyncio.sleep(6)
 
     await channel.last_message.edit(content=BOT_START_SHORT_MESSAGE)
 
     await schedule_daily_message()
 
 
-def init_stage(cur_dir):
-    dirs = ["data","config","inventory","logs","password","uploads","token"]
-  
-    # Parent Directory path
-    parent_dir = f"{cur_dir}/resources/"
-    
-    # Path
-    for dir in dirs:
-        path = os.path.join(parent_dir,dir)
-        try:
-            os.mkdir(path)
-        except FileExistsError:
-            logger.info(f"{dir} already exists")
-        else:
-            logger.info(f"Created: {dir} dir")
-
 @bot.tree.command(name="status",description="get bot status")
 async def bot_state(ctx:Interaction):
     await ctx.response.send_message(f"{BOT_STATE = }")
 
 def get_manifest_version_info():
-    git_link = "https://github.com/gregoryhornyak/discord_bot/blob/master/docs/manifest/manifest.json?raw=true"
+    git_link = "https://raw.githubusercontent.com/gregoryhornyak/discord_bot/master/docs/manifest/manifest.json"
     manifest = f1_data.requests.get(git_link).json()
     return manifest['version']
     
@@ -106,20 +96,31 @@ async def schedule_daily_message():
     while True:
         channel = bot.get_channel(CHANNEL_ID)
         now = datetime.datetime.now()
-        next_first_date = f1_module.next_grand_prix_schedule["practice-1"]
-        next_first_date_day = datetime.datetime.strptime(next_first_date,'%Y-%m-%d %H:%M:%S.%f').day
-        next_first_date_month = datetime.datetime.strptime(next_first_date,'%Y-%m-%d %H:%M:%S.%f').month
-        # morning schedule: auto-testing, fetching
-        if now.hour == 8 and now.minute == 5:
-            await channel.send(f"Next event at {next_first_date[:-10]}",silent=True)
-            logger.info(f"Morning routine: {now.day} to {next_first_date_day}?")
-            if now.day+3 >= next_first_date_day and now.month == next_first_date_month:
-                await channel.send(f"Next event in 3 days",silent=True)
-            if now.month == next_first_date_month:
-                if now.day+10 >= next_first_date_day:
-                    await channel.send(f"Next event in 10 days",silent=True)
+
+        # do daily fetch
+        if now.hour == 6 and now.minute == 15:
+            f1_module.daily_fetch()
+
+        next_grand_prix_events_time = {race_type: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for race_type,time in f1_module.next_grand_prix_events.items()}
+        #logger.info(f"{next_grand_prix_events_time = }")    
+
+        for r_t, time in next_grand_prix_events_time.items():
+            if now.hour+2 == time.hour:
+                if now.minute == time.minute:
+                    await channel.send(f"{r_t} starts in 2 hours!") 
+            elif now.hour+1 == time.hour:
+                if now.minute == time.minute:
+                    await channel.send(f"{r_t} starts in **1 hour**! Take your guesses!")
+            if now.hour == time.hour:
+                if now.minute == time.minute:
+                    await channel.send(f"Guessing phase is over for {r_t}!")
+                    f1_module.guess_schedule[r_t] = True
+
+        if now.minute%20==0:
+            logger.info(f"{f1_module.guess_schedule = }")
+
         loop_counter += 1
-        await asyncio.sleep(40)
+        await asyncio.sleep(55)
 
 @bot.tree.command(name="upgrade",description="long")
 async def upgrade(interaction:Interaction,password:str):
@@ -142,6 +143,16 @@ def get_discord_members(ctx:Interaction): # dont change it
         if member.name != "lord_maldonado":
             user_info[member.name] = member.id
     return user_info
+
+async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
+    for member in ctx.guild.members:
+        if member.name != "lord_maldonado":
+            logger.debug(f"{member.name}")
+            try:
+                await member.avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
+            except AttributeError:
+                await member.default_avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
+
 
 @bot.tree.command(name="guess",description="-")
 async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a slash command is a good option?
@@ -267,21 +278,23 @@ async def eval(ctx:Interaction):
     except FileNotFoundError:
         logger.warning("Missing scoring table!")
         scoring_board = {
-    "FP1": 9,
-    "FP2": 3,
-    "FP3": 1,
-    "Q1ST": 9,
-    "Q2ND": 3,
-    "Q3RD": 1,
-    "Q_BOTR": 18,
-    "R1ST": 27,
-    "R2ND": 9,
-    "R3RD": 3,
-    "R_BOTR": 54,
-    "R_DOTD": 69,
-    "R_FAST": 84,
-    "R_DNF": 50
-}
+        "FP1": 9,
+        "FP2": 3,
+        "FP3": 1,
+        "SH": 2,
+        "S": 3,
+        "Q1": 9,
+        "Q2": 3,
+        "Q3": 1,
+        "Q_BOTR": 18,
+        "R1": 27,
+        "R2": 9,
+        "R3": 3,
+        "R_BOTR": 54,
+        "R_DOTD": 69,
+        "R_FAST": 84,
+        "R_DNF": 50
+        }
         with open(f'{SCORE_TABLE_PATH}', 'w') as f:
             json.dump(scoring_board,f,indent=4)
 
@@ -306,7 +319,6 @@ async def eval(ctx:Interaction):
     # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
     #
 
-
     ## ready for evaluation  
 
     # for every user
@@ -319,62 +331,100 @@ async def eval(ctx:Interaction):
             for race_type,driver_name in results.items():
                 # for every race type
                 if guessed_race_type == race_type:
-                    #logger.info(f"{guessed_race_type} == {race_type}")
-                    #logger.info(f"{guessed_driver_name} == {driver_name}")
                     # for every guess 
                     if guessed_driver_name == driver_name:
-                        #logger.info(f"\n\n{users_db =}\n\n")
                         point = scoring_board[race_type] # each race_type's score
-                        logger.info(f"MATCH! {user_name}: {race_type},{driver_name} - {point} point")
-                        await channel.send(f"{user_name}: {race_type} - {driver_name} -> {point} point")
+                        logger.info(f"{user_name}: {race_type},{driver_name} - {point} point")
+                        #await channel.send(f"{user_name}: {race_type} - {driver_name} -> {point} point")
                         if str(user_id) not in users_db:                            
                             users_db[str(user_id)] = {"user_name": user_name,"round_score": {},"total_points": 0}
                         if str(race_id) not in users_db[str(user_id)]["round_score"]:
-                            
                             users_db[str(user_id)]["round_score"][str(race_id)] = {}
                         if "date" not in users_db[str(user_id)]["round_score"][str(race_id)]:
                             users_db[str(user_id)]["round_score"][str(race_id)]["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
                         if "location" not in users_db[str(user_id)]["round_score"][str(race_id)]:
                             users_db[str(user_id)]["round_score"][str(race_id)]["location"] = race_name
-                        #logger.info(f"BEFORE SCORE BOARD APPEND: {users_db[str(user_id)]['round_score'][str(race_id)] = }")
+                        if "evaluated" not in users_db[str(user_id)]["round_score"][str(race_id)]:
+                            users_db[str(user_id)]["round_score"][str(race_id)]["location"] = "False"
                         if "score_board" not in users_db[str(user_id)]["round_score"][str(race_id)]:
-                            #logger.warning("Score board wasnt in json")
                             users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = {}
                         # but not change for points, to restrict overwriting guesses
-                        #logger.info(f'{users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = }')
-                        #logger.info(f"{user_id = } {race_id = } {race_type = }")
                         users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][race_type] = point # if not DNF
-                        #logger.info(f'{users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = }')
-    
-    with open(f'{USERS_DB_PATH}', 'w') as f:
-        json.dump(users_db,f,indent=4)
-
-    logger.info("Dumped users_db")
                         
     await ctx.followup.send("Finished evaluating")
 
     logger.info("eval finished")
 
-@bot.tree.command(name="date",description="-")    
-async def setdate(interaction:Interaction, *, date_input:str):
-    try:
-        parsed_date = parse(date_input)
-        if parsed_date:
-            # set_date 2023 09 16
-            await interaction.response.send_message(f"Race date set to: {parsed_date.strftime('%Y-%m-%d %H:%M:%S')}")
-            logger.info(f"Race date set to: {parsed_date.strftime('%Y-%m-%d %H:%M:%S')}")
-            with open(f"{UPCOMING_DATE_PATH}","w") as f:
-                f.write(parsed_date.strftime('%Y-%m-%d %H:%M:%S'))
-        else:
-            await interaction.response.send_message("Invalid date format. Please use a valid date format.")
-    except Exception as e:
-        await interaction.response.send_message(f"An error occurred: {str(e)}")
+    # sum up the points
+    leader_board = {}
+    for the_rest in users_db.values():
+        local_score = 0
+        for race_list in the_rest["round_score"].values():
+            for key, race_details in race_list.items():
+                if key == "score_board":
+                    for point in race_details.values():
+                        local_score += int(point)
+        the_rest["total_points"] = local_score
+        leader_board[the_rest["user_name"]] = local_score
+
+    with open(f'{USERS_DB_PATH}', 'w') as f:
+        json.dump(users_db,f,indent=4)
+
+    logger.info("Dumped users_db")
+
+    logger.debug(f"{leader_board = }")
+    leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
+    profiles = [str(PROFILE_PICS_PATH+member_name+".png") for member_name in leader_board.keys()]
+    await save_discord_members_pics(ctx)
+    winner_name = profiles[0].split('/')[-1].split('.')[0]
+    logger.info(f"{winner_name = }")
+    create_podium(profiles[0],profiles[1],profiles[2],race_name.capitalize(),str(datetime.datetime.now().year),winner_name)
+
+    #await ctx.channel.send(file=discord.File("resources/uploads/winners.png"))
+    
+def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
+
+    place1 = Image.open(place_1)
+    place2 = Image.open(place_2)
+    place3 = Image.open(place_3)
+    new_size1 = (300, 300)
+    new_size2 = (230, 230)
+    new_size3 = (180, 180)
+    image1 = place1.resize(new_size1)
+    image2 = place2.resize(new_size2)
+    image3 = place3.resize(new_size3)
+    background_image = Image.open('resources/uploads/winners_stand.png')
+    background_image = background_image.convert('RGB')
+    combined_image = Image.new('RGB', background_image.size)
+    combined_image.paste(background_image, (0, 0))
+    # 1256x702
+    coord_image1 = (670-int(new_size1[0]/2),135)  # Coordinates for image1
+    coord_image2 = (260-int(new_size2[0]/2), 220)  # Coordinates for image2
+    coord_image3 = (1055-int(new_size2[0]/2), 288)  # Coordinates for image3
+    combined_image.paste(image1, coord_image1)
+    combined_image.paste(image2, coord_image2)
+    combined_image.paste(image3, coord_image3)
+
+    grat = random.choice(GRATULATION_PHRASES)
+
+    text = f"{grat} {winner_name}!    ({race_name}, {year})"
+    #font = ImageFont.truetype("arial.ttf", size=36)
+    position = (300, 634)
+    text_color = (0, 0, 0)
+    combined_image.save('resources/uploads/winners.png')
+    image = Image.open('resources/uploads/winners.png')
+    draw = ImageDraw.Draw(image)
+    font_size = 40
+    font = ImageFont.truetype("resources/uploads/Autography.otf", font_size)
+    draw.text(position, text, fill=text_color, font=font)
+    image.save('resources/uploads/winners.png')
 
 #--------< Additional Functions >----#
 
 @bot.tree.command(name="showresults",description="-")
 async def results(ctx:Interaction):
     results = f1_module.results_board
+    logger.warning(f"{f1_module.prev_race_details['name'] = }")
     await ctx.channel.send(f"For {f1_module.prev_race_details['name']}:")
     pretty_json = json.dumps(results, indent=4)
     await ctx.response.send_message(pretty_json)
@@ -427,7 +477,7 @@ async def myguess(ctx:discord.Interaction,username:str=""):
     cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user_name]
 
     race_name = f1_module.next_race_details["name"]
-    next_race_id = str(f1_module.next_race_details["id"])
+    next_race_id = f1_module.next_race_details["id"]
     cur_user_unique = cur_user.drop_duplicates(subset=['race_type'])
     cur_user_unique.set_index('race_type', inplace=True)
     cur_user_unique = cur_user_unique.sort_values(by='race_type')
@@ -458,7 +508,7 @@ async def mypoints(ctx:discord.Interaction,username:str=""):
     with open(f"{USERS_DB_PATH}", "r") as f:
             users_db = json.load(f)
     cur_user_db = users_db[str(ctx.user.id)]
-    prev_race_id = str(f1_module.prev_race_details["id"])
+    prev_race_id = f1_module.prev_race_details["id"]
     prev_race_name = f1_module.prev_race_details["name"]
     user_score = cur_user_db["round_score"][prev_race_id]["score_board"]
     user_score_df = f1_data.pd.DataFrame.from_dict(user_score,orient='index')
@@ -488,10 +538,16 @@ async def dadjoke(ctx:Interaction):
 async def whoami(ctx:Interaction):
     await ctx.response.send_message(f"You are {ctx.user.name},\nHey <@{ctx.user.id}>")
 
-@bot.tree.command(name="when_is_next",description="-")
-async def when_next(ctx:Interaction):
-    next_first_date = f1_module.next_grand_prix_schedule["practice-1"]
-    await ctx.response.send_message(f"Next event starts at {next_first_date[:-10]}",silent=True)
+@bot.tree.command(name="info",description="-")
+async def info(ctx:Interaction):
+    # export this dict compr to F1_module as func
+    next_event_details = {r_t: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for r_t,time in f1_module.next_grand_prix_events.items()}
+
+    descr = f"The bot is in **TEST** mode.\n"
+    for r_t,time in next_event_details.items():
+        descr += f"{r_t} at {time.month}-{time.day} {time.hour}:{time.minute}\n"
+    embed=discord.Embed(colour=0xFFFFFF,title="Race Information",description=descr)
+    await ctx.response.send_message(embed=embed)
 
 @bot.tree.command(name="hello",description="-")
 async def hello(ctx:Interaction):
@@ -500,13 +556,13 @@ async def hello(ctx:Interaction):
 @bot.tree.command(name="help",description="-")
 async def embed_test(ctx:Interaction):
     descr = f"First, take your guesses by **/guess**\n\
-Then wait until the race completes\n\
-Finally evaluate your score by **/eval**\n\
-In the meanwhile,\n\
-you can see your guess by **/myguesses**\n\
-and you can see your point by **/mypoints**\n\
-And of course invoke many *funny* commands as well\n\
-\nGood luck! 😁🏁"
+    Then wait until the race completes\n\
+    Finally evaluate your score by **/eval**\n\
+    In the meanwhile,\n\
+    you can see your guess by **/myguesses**\n\
+    and you can see your point by **/mypoints**\n\
+    And of course invoke many *funny* commands as well\n\
+    \nGood luck! 😁🏁"
     embed=discord.Embed(title="Tutorial",
                         description=descr,
                         color=0xFF5733)
