@@ -23,6 +23,7 @@ import subprocess
 
 from PIL import Image, ImageFont, ImageDraw
 import random
+import calendar
 
 ##
 ## TODO
@@ -60,7 +61,7 @@ async def on_ready():
     list_of_messages = []
     async for result in history_gen:
         message = await channel.fetch_message(result.id)
-        for line in [BOT_SHUTDOWN_UPGRD_MESSAGE,BOT_START_DETAILS_MESSAGE_LINE,BOT_START_SHORT_MESSAGE]:
+        for line in [BOT_SHUTDOWN_UPGRD_MESSAGE,BOT_START_DETAILS_MESSAGE_LINE,BOT_START_SHORT_MESSAGE,"Bot started"]:
             if line in message.content:
                 list_of_messages.append(message)
     await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
@@ -74,7 +75,7 @@ async def on_ready():
     boot_message = f1_data.re.sub(r'latest_ver', man_version, boot_message)
     boot_message = f1_data.re.sub(r'latest_update', manifest_info['latest'], boot_message)
 
-    await channel.send(boot_message,silent=True)
+    await channel.send("Bot started",silent=True)
 
     await bot.change_presence(activity=discord.Game(name=f"in {BOT_STATE} mode"))
 
@@ -108,19 +109,21 @@ async def schedule_daily_message():
         #logger.info(f"{next_grand_prix_events_time = }")    
 
         for r_t, time in next_grand_prix_events_time.items():
+            one_day_later = datetime.timedelta(days = 1)
+            delta = now.replace(second=0, microsecond=0) + one_day_later
+            if time == delta:
+                await channel.send(f"{r_t} starts in 1 day!")
             if now.hour+2 == time.hour:
                 if now.minute == time.minute:
                     await channel.send(f"{r_t} starts in 2 hours!") 
-            elif now.hour+1 == time.hour:
+            if now.hour+1 == time.hour:
                 if now.minute == time.minute:
-                    await channel.send(f"{r_t} starts in **1 hour**! Take your guesses!")
-            if now.hour == time.hour:
+                    await channel.send(f"{channel.guild.default_role} {r_t} starts in **1 hour**! Take your guesses!")
+            if now.day == time.day and now.hour == time.hour:
                 if now.minute == time.minute:
-                    await channel.send(f"Guessing phase is over for {r_t}!")
+                    await channel.send(f"{channel.guild.default_role} Guessing phase is over for {r_t}!")
+                    
                     f1_module.guess_schedule[r_t] = True
-
-        if now.minute%20==0:
-            logger.info(f"{f1_module.guess_schedule = }")
 
         loop_counter += 1
         await asyncio.sleep(55)
@@ -168,6 +171,10 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     drivers_info = f1_module.get_drivers_details()
     next_race_id = f1_module.next_race_details['id']
     next_race_name = f1_module.next_race_details['name']
+    #! TESTING: -> 
+    #* guess for previous race
+    next_race_id = f1_module.prev_race_details['id']
+    next_race_name = f1_module.prev_race_details['name']
     race_types_list = f1_module.get_race_types()
     logger.warning(f"{race_types_list = }")
 
@@ -381,7 +388,8 @@ async def eval(ctx:Interaction):
     await save_discord_members_pics(ctx)
     winner_name = profiles[0].split('/')[-1].split('.')[0]
     logger.info(f"{winner_name = }")
-    create_podium(profiles[0],profiles[1],profiles[2],race_name.capitalize(),str(datetime.datetime.now().year),winner_name)
+    if len(profiles) > 1:
+        create_podium(profiles[0],profiles[1],profiles[2],race_name.capitalize(),str(datetime.datetime.now().year),winner_name)
 
     #await ctx.channel.send(file=discord.File("resources/uploads/winners.png"))
     
@@ -410,7 +418,7 @@ def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
 
     grat = random.choice(GRATULATION_PHRASES)
 
-    text = f"{grat} {winner_name}!    ({race_name}, {year})"
+    text = f"{grat} {winner_name}!   ({race_name}, {year})"
     #font = ImageFont.truetype("arial.ttf", size=36)
     position = (300, 634)
     text_color = (0, 0, 0)
@@ -418,9 +426,14 @@ def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
     image = Image.open('resources/uploads/winners.png')
     draw = ImageDraw.Draw(image)
     font_size = 40
-    font = ImageFont.truetype("resources/uploads/Autography.otf", font_size)
+    font = ImageFont.truetype("resources/uploads/Arial.ttf", font_size)
     draw.text(position, text, fill=text_color, font=font)
     image.save('resources/uploads/winners.png')
+
+
+@bot.tree.command(name="bonus",description="-")
+async def bonus(ctx:Interaction):
+    await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"winners.png"))
 
 #--------< Additional Functions >----#
 
@@ -548,13 +561,13 @@ async def info(ctx:Interaction):
 
     descr = f"The bot is in **TEST** mode.\n"
     for r_t,time in next_event_details.items():
-        descr += f"{r_t} at {time.month}-{time.day} {time.hour}:{time.minute}\n"
+        descr += f"{r_t} at {time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{time.minute}\n"
     embed=discord.Embed(colour=0xFFFFFF,title="Race Information",description=descr)
     await ctx.response.send_message(embed=embed)
 
 @bot.tree.command(name="hello",description="-")
 async def hello(ctx:Interaction):
-    await ctx.response.send_message("Hello there")
+    await ctx.response.send_message(f"Hello there! {ctx.guild.default_role}")
 
 @bot.tree.command(name="help",description="-")
 async def embed_test(ctx:Interaction):

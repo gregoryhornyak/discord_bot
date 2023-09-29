@@ -144,7 +144,6 @@ class F1DataFetcher:
             json.dump(fetch_log,f,indent=4)
 
     def check_fetch_log(self) -> bool:
-        logger.info("check_fetch_log started")
         fetch_log = {} # empty
         missing_results_json = False
         start_fetch = False
@@ -268,15 +267,16 @@ class F1DataFetcher:
             datetime_obj = datetime.datetime.strftime(datetime_obj,'%Y-%m-%d %H:%M:%S.%f')
             grand_prix_schedule[str(race_id)][class_name_pretty] = datetime_obj
 
-        #! TESTING:
-        #* next_event_details.json is loaded to replace true times
-        self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
-        """
+        #! TESTING ->
+        #* next_event_details.json is loaded to replace true times | uncomment it for normal mode
+        #self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
+        
         temp_json = {}
         with open(f"{NEXT_EVENT_DATES_PATH}","r") as f:
             temp_json = json.load(f)
-        self.next_grand_prix_events = temp_json[str(race_id)]
-        """
+        self.next_grand_prix_events = temp_json
+        #! -> TESTING
+        
 
     def load_results(self):
         # see if results are existend
@@ -296,13 +296,13 @@ class F1DataFetcher:
 
     def update_urls(self) -> None:
         # Replace placeholders with values using regular expressions
-        """
-        #! FOR TESTING PURPOSES OF PREV RACES, USE THIS FUNC
+        
+        #! FOR TESTING PURPOSES OF PREV RACES, USE THIS FUNC ->
 
         custom_race_id = "1207"
         custom_race_name = "azerbaijan"
-        custom_next_race_id = "1208"
-        custom_next_race_name = "miami"
+        custom_next_race_id = custom_race_id#"1208"
+        custom_next_race_name = custom_race_name#"miami"
 
         self.prev_race_details["id"] = custom_race_id
         self.prev_race_details["name"] = custom_race_name
@@ -318,8 +318,8 @@ class F1DataFetcher:
         
         return 0
 
-        #! FOR TESTING PURPOSES ONLY
-        """
+        #! -> FOR TESTING PURPOSES ONLY
+        
         for key,url in self.formula_one_urls.items():
             url_updated_id = re.sub(r'prev_race_id', str(self.prev_race_details["id"]), url)
             url_updated_id_name = re.sub(r'prev_race_name', self.prev_race_details["name"], url_updated_id)
@@ -335,9 +335,15 @@ class F1DataFetcher:
 
     def update_guess_schedule(self):
         #have to overwrite previous one
-        next_grand_prix_events = self.next_grand_prix_events[self.next_race_details["id"]]
+        next_grand_prix_events = self.next_grand_prix_events
         for race_type in next_grand_prix_events.keys():
             self.guess_schedule[race_type] = False
+        #!TESTING: ->
+        """
+        with open(NEXT_EVENT_DATES_PATH,"w") as f:
+            json.dump(next_grand_prix_events,f,indent=4)
+        """
+        #! -> TESTING
 
     def event_in_schedule(self,event_name,event_url) -> bool:
         """try to find if there was an event"""
