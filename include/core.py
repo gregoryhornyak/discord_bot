@@ -426,7 +426,7 @@ def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
     image = Image.open('resources/uploads/winners.png')
     draw = ImageDraw.Draw(image)
     font_size = 40
-    font = ImageFont.truetype("resources/uploads/Arial.ttf", font_size)
+    font = ImageFont.truetype("resources/uploads/Autography.otf", font_size)
     draw.text(position, text, fill=text_color, font=font)
     image.save('resources/uploads/winners.png')
 
