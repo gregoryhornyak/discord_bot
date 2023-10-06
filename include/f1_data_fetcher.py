@@ -12,6 +12,7 @@ class F1DataFetcher:
     #* includes:
     #*
     #* - prev and next race details
+    #* - prev and next race types
     #* - all the formula one urls
     #* - the grand prixes urls for the year
     #* - list of next prix's events and dates
@@ -91,6 +92,8 @@ class F1DataFetcher:
         "R_FAST": "",
         "R_DNF": ""
         }
+    
+    guess_board = {}
 
     #* New Structure:
     #*
@@ -133,11 +136,6 @@ class F1DataFetcher:
 
         if fetch_log:
             self.create_fetch_log(fetch_log)
-
-        logger.debug("TEST DETAILS:")
-        logger.debug(f"{self.prev_race_details = }")
-        logger.debug(f"{self.next_race_details = }")
-        logger.debug(f"{self.formula_one_urls['next_race_schedule'] = }")
 
     def create_fetch_log(self,fetch_log):
         with open(f"{FETCH_LOG_PATH}","w") as f:
@@ -267,14 +265,15 @@ class F1DataFetcher:
             datetime_obj = datetime.datetime.strftime(datetime_obj,'%Y-%m-%d %H:%M:%S.%f')
             grand_prix_schedule[str(race_id)][class_name_pretty] = datetime_obj
 
-        #! TESTING ->
         #* next_event_details.json is loaded to replace true times | uncomment it for normal mode
-        #self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
-        
+        self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
+        #! TESTING ->
+        """
         temp_json = {}
         with open(f"{NEXT_EVENT_DATES_PATH}","r") as f:
             temp_json = json.load(f)
         self.next_grand_prix_events = temp_json
+        """
         #! -> TESTING
         
 
@@ -297,6 +296,7 @@ class F1DataFetcher:
     def update_urls(self) -> None:
         # Replace placeholders with values using regular expressions
         
+        """
         #! FOR TESTING PURPOSES OF PREV RACES, USE THIS FUNC ->
 
         custom_race_id = "1207"
@@ -315,10 +315,10 @@ class F1DataFetcher:
             url_updated_id_name = re.sub(r'prev_race_name', custom_race_name, url_updated_id)
             url_updated_next_id_name = re.sub(r'next_race_name', self.next_race_details["name"].capitalize(), url_updated_id_name)
             self.formula_one_urls[key] = url_updated_next_id_name
-        
-        return 0
 
         #! -> FOR TESTING PURPOSES ONLY
+        
+        """        
         
         for key,url in self.formula_one_urls.items():
             url_updated_id = re.sub(r'prev_race_id', str(self.prev_race_details["id"]), url)
@@ -338,11 +338,11 @@ class F1DataFetcher:
         next_grand_prix_events = self.next_grand_prix_events
         for race_type in next_grand_prix_events.keys():
             self.guess_schedule[race_type] = False
-        #!TESTING: ->
-        """
+        #!TESTING: -> comment this section out
+        
         with open(NEXT_EVENT_DATES_PATH,"w") as f:
             json.dump(next_grand_prix_events,f,indent=4)
-        """
+        
         #! -> TESTING
 
     def event_in_schedule(self,event_name,event_url) -> bool:
@@ -414,8 +414,6 @@ class F1DataFetcher:
                 else:
                     self.results_board["R_DNF"] = str(1+int(self.results_board["R_DNF"]))
         
-        
-
     def fetch_qual_results(self):
         """find out qualifying results in previous race"""
         prev_qual_soap = self.request_and_get_soap(self.formula_one_urls["qualifying"])
@@ -455,7 +453,6 @@ class F1DataFetcher:
         prev_fpN_table_df = pd.DataFrame(prev_fpN_table_clean, columns=prev_fpN_table_header)
         self.results_board[race_type_short] = prev_fpN_table_df.loc[0]['Driver']
 
-
     def fetch_sprint_race_results(self):
         """find sprint results"""
         prev_sprint_soap = self.request_and_get_soap(self.formula_one_urls["sprint"])
@@ -470,8 +467,6 @@ class F1DataFetcher:
         prev_sprint_table_df = pd.DataFrame(prev_sprint_table_clean, columns=prev_sprint_table_header)
         #
         self.results_board["S"] = prev_sprint_table_df.loc[0]['Driver']
-
-        
 
     def fetch_sprint_shootout_results(self):
         """Fetch sprint Shootout"""
@@ -488,8 +483,6 @@ class F1DataFetcher:
         #
         self.results_board["SO"] = prev_shootout_table_df.loc[0]['Driver']
 
-        
-
     def fetch_dotd_results(self):
         # driver of the day
         prev_dotd_soap = self.request_and_get_soap(self.formula_one_urls["driver-of-the-day"])
@@ -499,8 +492,6 @@ class F1DataFetcher:
         # 'Carlos Sainz - 31.5%\nSergio Perez - 14.8%\nMax Verstappen - 13.3%\nAlex Albon - 10.7%\nCharles Leclerc - 6%',
         dotd = prev_dotd_list.split("\n")[0]
         self.results_board["DOTD"] = dotd.split("-")[0].strip()
-
-        
 
     def fetch_fastest_results(self):
         """fastest lap driver name"""
@@ -535,9 +526,11 @@ class F1DataFetcher:
         return drivers_info
 
     def get_race_types(self) -> list:
-        logger.info(f"{self.results_board = }")
-        return_list = [k for k,v in self.results_board.items() if v!=""]
-        
+        return_list = []
+        if "sprint" in self.next_grand_prix_events:
+            return_list = ["FP1","SO","S","Q1","Q2","Q3","Q_BOTR","R1","R2","R3","R_BOTR","DOTD","R_FAST","R_DNF"] # refine it into a for loop
+        else:
+            return_list = ["FP1","FP2","FP3","Q1","Q2","Q3","Q_BOTR","R1","R2","R3","R_BOTR","DOTD","R_FAST","R_DNF"] 
         return return_list
     
     def get_point_table(self):

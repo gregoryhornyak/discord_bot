@@ -47,10 +47,6 @@ def save_guess(name,id,select_race,select_driver,next_race_id,dnf=False):
             "race_type": _select_race,
             "driver_name": _select_driver
         }
-    if dnf:
-        logger.info(f"{name},{select_race},{select_driver}")
-    else:
-        logger.info(f"{name},{select_race},{select_driver}")
 
     try:
         with open(f"{GUESS_DB_PATH}", "r") as f:

@@ -65,6 +65,19 @@ async def on_ready():
             if line in message.content:
                 list_of_messages.append(message)
     await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
+
+    # create lock file if not exists
+    locked = {"locked":False}
+    try:
+        with open(LOCK_FILE_PATH,"r") as f:
+            locked = json.load(f)
+    except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
+        logger.error(e)
+        with open(LOCK_FILE_PATH,"w") as f:
+            json.dump(locked,f,indent=4)
+    finally:
+        logger.info(f"{locked = }")
+
     man_version = get_manifest_version_info()
 
     with open(f"{MANIFEST_PATH}", "r") as f:
@@ -111,7 +124,7 @@ async def schedule_daily_message():
         for r_t, time in next_grand_prix_events_time.items():
             one_day_later = datetime.timedelta(days = 1)
             delta = now.replace(second=0, microsecond=0) + one_day_later
-            if time == delta:
+            if time == delta and time.hour == delta.hour:
                 await channel.send(f"{r_t} starts in 1 day!")
             if now.hour+2 == time.hour:
                 if now.minute == time.minute:
@@ -122,6 +135,7 @@ async def schedule_daily_message():
             if now.day == time.day and now.hour == time.hour:
                 if now.minute == time.minute:
                     await channel.send(f"{channel.guild.default_role} Guessing phase is over for {r_t}!")
+                    #lock_guess(r_t)
                     
                     f1_module.guess_schedule[r_t] = True
 
@@ -171,10 +185,6 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     drivers_info = f1_module.get_drivers_details()
     next_race_id = f1_module.next_race_details['id']
     next_race_name = f1_module.next_race_details['name']
-    #! TESTING: -> 
-    #* guess for previous race
-    next_race_id = f1_module.prev_race_details['id']
-    next_race_name = f1_module.prev_race_details['name']
     race_types_list = f1_module.get_race_types()
     logger.warning(f"{race_types_list = }")
 
@@ -386,11 +396,13 @@ async def eval(ctx:Interaction):
     leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
     profiles = [str(PROFILE_PICS_PATH+member_name+".png") for member_name in leader_board.keys()]
     await save_discord_members_pics(ctx)
-    winner_name = profiles[0].split('/')[-1].split('.')[0]
+    winner_name = "NOONE"
+    if profiles:
+        winner_name = profiles[0].split('/')[-1].split('.')[0]
     logger.info(f"{winner_name = }")
     if len(profiles) > 1:
         create_podium(profiles[0],profiles[1],profiles[2],race_name.capitalize(),str(datetime.datetime.now().year),winner_name)
-
+    #await ctx.channel.send("Finished leaderboard")
     #await ctx.channel.send(file=discord.File("resources/uploads/winners.png"))
     
 def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
@@ -559,9 +571,15 @@ async def info(ctx:Interaction):
     # export this dict compr to F1_module as func
     next_event_details = {r_t: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for r_t,time in f1_module.next_grand_prix_events.items()}
 
-    descr = f"The bot is in **TEST** mode.\n"
+    descr = f"The bot is in **{BOT_STATE}** mode.\n"
+    disp_minute = ""
+    
     for r_t,time in next_event_details.items():
-        descr += f"{r_t} at {time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{time.minute}\n"
+        if time.minute < 10:
+            disp_minute = str(time.minute)+"0"
+        else:
+            disp_minute = str(time.minute)
+        descr += f"{time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{disp_minute} - {r_t}\n"
     embed=discord.Embed(colour=0xFFFFFF,title="Race Information",description=descr)
     await ctx.response.send_message(embed=embed)
 
