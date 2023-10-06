@@ -126,13 +126,12 @@ class F1DataFetcher:
         self.check_yearly_event_schedule_url()
         self.get_next_grand_prix_details()
 
-        if start_fetch: # no results exists / out of date
-            self.sort_working_urls() #! SHOULD
-            self.update_guess_schedule()
-            self.fetch_all_into_cache() #? IF not fetched today
-            self.save_results_to_json() #? IF not fetched today
-        else:
-            self.load_results()
+        #if start_fetch: # no results exists / out of date
+        self.sort_working_urls() #! SHOULD
+        self.update_guess_schedule()
+        self.fetch_all_into_cache() #? IF not fetched today
+        self.save_results_to_json() #? IF not fetched today
+
 
         if fetch_log:
             self.create_fetch_log(fetch_log)
@@ -154,7 +153,6 @@ class F1DataFetcher:
                 fetch_log = json.load(f) # loaded
 
         except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
-            
             missing_results_json = True
             start_fetch = True
             fetch_date = datetime.datetime.now()
