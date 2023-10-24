@@ -58,7 +58,7 @@ class F1DataFetcher:
 
     next_grand_prix_events = {}
 
-    guess_schedule = {}
+    guess_schedule_over = {}
 
     #* current race schedules
 
@@ -244,9 +244,11 @@ class F1DataFetcher:
 
     def get_next_grand_prix_details(self):
         race_id = self.next_race_details["id"]
-        url= str(self.grand_prix_calendar_urls[self.next_race_details["id"]]+"#track-time")
+        url= str(self.grand_prix_calendar_urls[self.next_race_details["id"]]+"#my-time")
+        
         event_soap = self.request_and_get_soap(url)
         event_soap_finds = event_soap.find_all('div', class_=lambda x: x and x.startswith("js-"))
+        
         event_soap_race_types_classes = [name.get('class')[1] for name in event_soap_finds]
         grand_prix_schedule = {}
         grand_prix_schedule[str(race_id)] = {}
@@ -255,25 +257,63 @@ class F1DataFetcher:
             if race_type_class[:3] == "js-":
                 class_name_pretty = race_type_class[3:] #* row js-race
             else:
-                print("NAGY SZAR VAN")
+                logger.error("NAGY SZAR VAN")
             class_name = str("row "+race_type_class)
             event_soap_finds = event_soap.find_all('div', class_=class_name)
             event_start_date = [name.get('data-start-time') for name in event_soap_finds]
-            datetime_obj = datetime.datetime.strptime(event_start_date[0], '%Y-%m-%dT%H:%M:%S')
-            datetime_obj = datetime.datetime.strftime(datetime_obj,'%Y-%m-%d %H:%M:%S.%f')
+            event_time_offset = [name.get('data-gmt-offset') for name in event_soap_finds]
+            converted_start_time = self.datetime_converter(event_start_date[0],event_time_offset[0])
+            datetime_obj = datetime.datetime.strftime(converted_start_time,'%Y-%m-%d %H:%M:%S.%f')
             grand_prix_schedule[str(race_id)][class_name_pretty] = datetime_obj
 
         #* next_event_details.json is loaded to replace true times | uncomment it for normal mode
         self.next_grand_prix_events = grand_prix_schedule[str(race_id)]
-        #! TESTING ->
+        with open(f"{NEXT_EVENT_DATES_PATH}","w") as f:
+            json.dump(self.next_grand_prix_events,f,indent=4)
+        
         """
+        #! TESTING ->
+        
         temp_json = {}
         with open(f"{NEXT_EVENT_DATES_PATH}","r") as f:
             temp_json = json.load(f)
         self.next_grand_prix_events = temp_json
-        """
-        #! -> TESTING
+        logger.debug("using test date dataset for *self.next_grand_prix_events*")
         
+        #! -> TESTING
+        """
+
+    def datetime_converter(self,start_time_str,gmt_offset_str):
+        from datetime import datetime, timedelta
+        import pytz
+
+        # Given values
+        #start_time_str = "2023-10-27T16:00:00"
+        #gmt_offset_str = "-06:00"
+
+        # Parse start time
+        start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%S")
+
+        # Parse GMT offset
+        gmt_offset_hours, gmt_offset_minutes = map(int, gmt_offset_str.split(':'))
+        gmt_offset = timedelta(hours=gmt_offset_hours, minutes=gmt_offset_minutes)
+
+        # Calculate current time adjusted for GMT offset
+        current_time_utc = datetime.utcnow()
+        current_time_with_offset = current_time_utc + gmt_offset
+
+        # Convert start time to the timezone of the current time
+        local_tz = pytz.timezone('UTC')  # Assuming the start time is in UTC
+        start_time_utc = local_tz.localize(start_time)
+        start_time_with_offset = start_time_utc.astimezone(pytz.utc)
+
+        # Calculate the start time according to the current time and offset
+        adjusted_start_time = start_time_with_offset - (current_time_with_offset - current_time_utc)
+
+        #logger.info(f'Adjusted Start Time (UTC):, {adjusted_start_time.strftime("%Y-%m-%dT%H:%M:%S") = }')
+
+        return adjusted_start_time
+
 
     def load_results(self):
         # see if results are existend
@@ -335,7 +375,7 @@ class F1DataFetcher:
         #have to overwrite previous one
         next_grand_prix_events = self.next_grand_prix_events
         for race_type in next_grand_prix_events.keys():
-            self.guess_schedule[race_type] = False
+            self.guess_schedule_over[race_type] = False
         #!TESTING: -> comment this section out
         
         with open(NEXT_EVENT_DATES_PATH,"w") as f:
