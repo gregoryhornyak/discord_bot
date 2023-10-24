@@ -26,11 +26,14 @@ STATE_FILE_PATH = "resources/config/state.json"
 CHANNEL_ID = 1078427611597906004
 SERVER_ID = 1078427611597906001
 
+ALERT_CHECK_DELAY = 55
+
 BOT_SHUTDOWN_UPGRD_MESSAGE = "Bot is shutting down and will be upgraded..."
 BOT_START_DETAILS_MESSAGE = f"bot_name\n\
 vversion [latest:latest_ver]\n\
 is now running...\n\
 Latest update: latest_update"
+
 BOT_START_DETAILS_MESSAGE_LINE = "Latest update"
 BOT_START_SHORT_MESSAGE = "Bot is on"
 
