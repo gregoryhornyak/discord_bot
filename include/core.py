@@ -66,14 +66,14 @@ async def on_ready():
                 list_of_messages.append(message)
     await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
 
-    # create lock file if not exists
+    # create state file if not exists
     locked = {"locked":False}
     try:
-        with open(LOCK_FILE_PATH,"r") as f:
+        with open(STATE_FILE_PATH,"r") as f:
             locked = json.load(f)
     except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
         logger.error(e)
-        with open(LOCK_FILE_PATH,"w") as f:
+        with open(STATE_FILE_PATH,"w") as f:
             json.dump(locked,f,indent=4)
     finally:
         logger.info(f"{locked = }")
@@ -118,26 +118,18 @@ async def schedule_daily_message():
         if now.hour == 6 and now.minute == 15:
             f1_module.daily_fetch()
 
-        next_grand_prix_events_time = {race_type: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for race_type,time in f1_module.next_grand_prix_events.items()}
-        #logger.info(f"{next_grand_prix_events_time = }")    
-
+        next_grand_prix_events_time = {race_type: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for race_type,time in f1_module.next_grand_prix_events.items()}  
+        delta = now.replace(second=0, microsecond=0) + datetime.timedelta(days = 1)
         for r_t, time in next_grand_prix_events_time.items():
-            one_day_later = datetime.timedelta(days = 1)
-            delta = now.replace(second=0, microsecond=0) + one_day_later
-            if time == delta and time.hour == delta.hour:
-                await channel.send(f"{r_t} starts in 1 day!")
-            if now.hour+2 == time.hour:
-                if now.minute == time.minute:
-                    await channel.send(f"{r_t} starts in 2 hours!") 
-            if now.hour+1 == time.hour:
-                if now.minute == time.minute:
-                    await channel.send(f"{channel.guild.default_role} {r_t} starts in **1 hour**! Take your guesses!")
-            if now.day == time.day and now.hour == time.hour:
-                if now.minute == time.minute:
-                    await channel.send(f"{channel.guild.default_role} Guessing phase is over for {r_t}!")
-                    #lock_guess(r_t)
-                    
-                    f1_module.guess_schedule[r_t] = True
+            if time.month == delta.month and time.day == delta.day and time.hour == delta.hour and time.minute == delta.minute:
+                await channel.send(f"{r_t} starts in 1 day!") # seems oke
+            if now.month == time.month and now.day == time.day and now.hour+2 == time.hour and now.minute == time.minute:
+                await channel.send(f"{r_t} starts in 2 hours!") 
+            if now.month == time.month and now.day == time.day and now.hour+1 == time.hour and now.minute == time.minute:
+                await channel.send(f"{channel.guild.default_role} {r_t} starts in **1 hour**! Take your guesses!")
+            if now.month == time.month and now.day == time.day and now.hour == time.hour and now.minute == time.minute:
+                await channel.send(f"{channel.guild.default_role} Guessing phase is over for {r_t}!")    
+                f1_module.guess_schedule_over[r_t] = True
 
         loop_counter += 1
         await asyncio.sleep(55)
@@ -167,7 +159,7 @@ def get_discord_members(ctx:Interaction): # dont change it
 async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
     for member in ctx.guild.members:
         if member.name != "lord_maldonado":
-            logger.debug(f"{member.name}")
+            #logger.debug(f"{member.name}")
             try:
                 await member.avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
             except AttributeError:
@@ -300,22 +292,22 @@ async def eval(ctx:Interaction):
     except FileNotFoundError:
         logger.warning("Missing scoring table!")
         scoring_board = {
-        "FP1": 9,
-        "FP2": 3,
+        "FP1": 3,
+        "FP2": 2,
         "FP3": 1,
         "SH": 2,
-        "S": 3,
-        "Q1": 9,
-        "Q2": 3,
+        "S": 1,
+        "Q1": 3,
+        "Q2": 2,
         "Q3": 1,
-        "Q_BOTR": 18,
-        "R1": 27,
-        "R2": 9,
-        "R3": 3,
-        "R_BOTR": 54,
-        "R_DOTD": 69,
-        "R_FAST": 84,
-        "R_DNF": 50
+        "Q_BOTR": 1,
+        "R1": 5,
+        "R2": 3,
+        "R3": 2,
+        "R_BOTR": 1,
+        "R_DOTD": 1,
+        "R_FAST": 1,
+        "R_DNF": 1
         }
         with open(f'{SCORE_TABLE_PATH}', 'w') as f:
             json.dump(scoring_board,f,indent=4)
@@ -448,6 +440,7 @@ def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
 @bot.tree.command(name="bonus",description="-")
 async def bonus(ctx:Interaction):
     await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"winners.png"))
+    logger.info("Team photo requested")
 
 #--------< Additional Functions >----#
 
