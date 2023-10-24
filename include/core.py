@@ -132,7 +132,7 @@ async def schedule_daily_message():
                 f1_module.guess_schedule_over[r_t] = True
 
         loop_counter += 1
-        await asyncio.sleep(55)
+        await asyncio.sleep(ALERT_CHECK_DELAY)
 
 @bot.tree.command(name="upgrade",description="long")
 async def upgrade(interaction:Interaction,password:str):
