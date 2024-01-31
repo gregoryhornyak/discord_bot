@@ -32,34 +32,35 @@ f1_module = f1_data.F1DataFetcher()
 @bot.event
 async def on_message(ctx:Interaction):
     if ctx.author.name != "lord_maldonado":
+        # search any swear words in the messages
         did_swear = [item for item in SWEAR_WORDS if item in ctx.content.lower()]
         if did_swear:
             await ctx.channel.send(random.choice(BLACK_LISTED_PHRASES))
 
-# implement pause between upgrade shutdowns
-# read a manifest on how many minutes to stop for
-
 @bot.event
 async def on_ready():
     logger.info(f'Logged in as {bot.user}')
+    # synchronise commands globally
     bot.tree.copy_global_to(guild=discord.Object(id=SERVER_ID))
     await bot.tree.sync(guild=discord.Object(id=SERVER_ID))
     channel = bot.get_channel(CHANNEL_ID)
-    #* MESSAGE DELETE SECTION
     history_gen = channel.history(limit=1)
     list_of_messages = []
+    
     async for result in history_gen:
         message = await channel.fetch_message(result.id)
         for line in [BOT_SHUTDOWN_UPGRD_MESSAGE,BOT_START_DETAILS_MESSAGE_LINE,BOT_START_SHORT_MESSAGE,"Bot started"]:
+            # check if goodbye message in history
             if line in message.content:
                 list_of_messages.append(message)
+    # delete goodbye messages to avoid flooding channel
     await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
-        
+    # bot version
     man_version = "TEST"#get_manifest_version_info()
 
     with open(f"{MANIFEST_PATH}", "r") as f:
         manifest_info = json.load(f)
-
+    # substitute bot info message with information
     boot_message = f1_data.re.sub(r'bot_name', manifest_info['bot_name'], BOT_START_DETAILS_MESSAGE)
     boot_message = f1_data.re.sub(r'version', manifest_info['version'], boot_message)
     boot_message = f1_data.re.sub(r'latest_ver', man_version, boot_message)
@@ -69,9 +70,9 @@ async def on_ready():
 
     await bot.change_presence(activity=discord.Game(name=f"in {BOT_STATE} mode"))
 
-    await asyncio.sleep(6)
-
     await channel.last_message.edit(content=BOT_START_SHORT_MESSAGE)
+
+    await asyncio.sleep(3)
 
     await schedule_daily_message()
 
@@ -135,7 +136,7 @@ async def schedule_daily_message():
         loop_counter += 1
         await asyncio.sleep(ALERT_CHECK_DELAY)
 
-@bot.tree.command(name="upgrade",description="long")
+@bot.tree.command(name="upgrade",description="reboots and updates bot")
 async def upgrade(interaction:Interaction,password:str):
     """reboots the whole bot, and updates it from Github"""
     password_stored = ""
@@ -173,8 +174,8 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     await ctx.response.defer(ephemeral=True)
     
     #await channel.send("Fetching has begun... may take a while",delete_after=1)
+    # -> save the data into a file, to avoid long fetching
 
-    # save the data into a file, to avoid long fetching
     drivers_info = f1_module.get_drivers_details()
     next_race_id = f1_module.next_race_details['id']
     next_race_name = f1_module.next_race_details['name']
@@ -220,7 +221,7 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
 
 #schedule_2023 = "https://www.formula1.com/en/latest/article.formula-1-update-on-the-2023-calendar.4pTQzihtKTiegogmNX5XrP.html"
 
-@bot.tree.command(name="dnf",description="guess num of dnf")
+@bot.tree.command(name="dnf",description="Guess number of DNF")
 async def dnf(interaction: discord.Interaction, count: int):
     next_race_id = f1_module.next_race_details['id']
     next_race_name = f1_module.next_race_details['name']
@@ -307,7 +308,7 @@ async def eval(ctx:Interaction):
         "R2": 3,
         "R3": 2,
         "R_BOTR": 1,
-        "R_DOTD": 1,
+        "DOTD": 1,
         "R_FAST": 1,
         "R_DNF": 1
         }
@@ -335,6 +336,9 @@ async def eval(ctx:Interaction):
     # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
     #
 
+    logger.info(f"{f1_module.prev_race_details = }")
+    logger.info(f"{f1_module.next_race_details = }")
+
     ## ready for evaluation  
 
     # for every user
@@ -349,7 +353,10 @@ async def eval(ctx:Interaction):
                 if guessed_race_type == race_type:
                     # for every guess 
                     if guessed_driver_name == driver_name:
-                        point = scoring_board[race_type] # each race_type's score
+                        if str(race_type) in scoring_board:                            
+                            point = scoring_board[race_type] # each race_type's score
+                        else:
+                            logger.info("EVAL: missing race type")
                         logger.info(f"{user_name}: {race_type},{driver_name} - {point} point")
                         #await channel.send(f"{user_name}: {race_type} - {driver_name} -> {point} point")
                         if str(user_id) not in users_db:                            
@@ -386,11 +393,23 @@ async def eval(ctx:Interaction):
     with open(f'{USERS_DB_PATH}', 'w') as f:
         json.dump(users_db,f,indent=4)
 
-    logger.info("Dumped users_db")
+    logger.info("Saved users_db")
 
     logger.debug(f"{leader_board = }")
 
-    await ctx.followup.send(f"{leader_board}")
+    descr = ""
+    the_winner = True
+    for name, score in leader_board.items():
+        if the_winner:
+            descr+="You're Winner: "
+            the_winner = False
+        descr += f"{name} - {score} points\n"
+
+
+    embed=discord.Embed(colour=0xFFFFFF,title="LEADERBOARD",description=descr)
+    #await ctx.response.send_message()
+
+    await ctx.followup.send(embed=embed)
 
     leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
     profiles = [str(PROFILE_PICS_PATH+member_name+".png") for member_name in leader_board.keys()]
@@ -462,9 +481,9 @@ async def results(ctx:Interaction):
 async def rules(interaction:Interaction):
     rule_book = """
 Rules for guessing:
-1. find all the users who guessed (if didnt, out of game)
+1. find all the users who guessed (if didnt, out of game).
 2. if more guesses under same race_type then latest matters.
-3. if didnt guess in a race_type then doesnt get points
+3. if didnt guess in a race_type then doesn't get points.
 """
     await interaction.response.send_message(rule_book)
 
@@ -541,7 +560,7 @@ async def mypoints(ctx:discord.Interaction,username:str=""):
     user_score = cur_user_db["round_score"][prev_race_id]["score_board"]
     user_score_df = f1_data.pd.DataFrame.from_dict(user_score,orient='index')
     user_score_df.rename(columns={0: 'Point'}, inplace=True)
-    logger.info(f"{user_name = } {prev_race_name = } {user_score_df = }")
+    #logger.info(f"{user_name = } {prev_race_name = } {user_score_df = }")
     with open(f"{USER_POINT_HISTORY_PATH}",'w') as f:
         f.write(f"### {'&nbsp;'*11} {user_name}'s score for {prev_race_name} {datetime.datetime.now().year}\n")
         f.write(user_score_df.to_markdown())
@@ -635,7 +654,7 @@ async def lajos(ctx:Interaction, pia:str="palinka"):
     if pia == "palinka":
         for line in script.split('\n'):
             await channel.send(line,silent=True)
-    elif pia == "geci":
+    elif pia == "vodka":
         await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi? ||")
     await ctx.followup.send("---")
 

@@ -95,7 +95,8 @@ class F1DataFetcher:
     
     guess_board = {}
 
-    is_testing = True
+    is_testing = True if BOT_STATE == "TEST" else False
+    logger.info(f"{is_testing = }")
 
     #* New Structure:
     #*
@@ -123,11 +124,11 @@ class F1DataFetcher:
             test_data_set={}
             with open(f"{TEST_DATA_PATH}","r") as f:
                 test_data_set = json.load(f)
-            self.prev_race_details     =test_data_set["prev_race_details"]
-            self.next_race_details     =test_data_set["next_race_details"]
-            self.next_grand_prix_events=test_data_set["next_grand_prix_events"]
-            self.prev_events_schedule  =test_data_set["prev_events_schedule"]
-            self.results_board         =test_data_set["results_board"]
+            self.prev_race_details      =test_data_set["prev_race_details"]
+            self.next_race_details      =test_data_set["next_race_details"]
+            self.next_grand_prix_events =test_data_set["next_grand_prix_events"]
+            self.prev_events_schedule   =test_data_set["prev_events_schedule"]
+            self.results_board          =test_data_set["results_board"]
 
             with open(NEXT_EVENT_DATES_PATH,"w") as f:
                 json.dump(self.next_grand_prix_events,f,indent=4)

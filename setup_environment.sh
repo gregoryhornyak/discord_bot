@@ -15,6 +15,8 @@ echo "Creating uploads directory"
 mkdir uploads
 echo "Creating password directory"
 mkdir password
+echo "Creating tests directory"
+mkdir tests
 cd ..
 tree
 echo "Finished setting up directories"
