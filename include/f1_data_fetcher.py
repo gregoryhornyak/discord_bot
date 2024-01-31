@@ -39,18 +39,18 @@ class F1DataFetcher:
 
     #* urls
     formula_one_urls = {
-        "all_races_url":        "https://www.formula1.com/en/results.html/2023/races.html",
-        "next_race_schedule":   "https://www.formula1.com/en/racing/2023/next_race_name.html",
-        "year_schedule":        "https://www.formula1.com/en/racing/2023.html",
-        "race":                 "https://www.formula1.com/en/results.html/2023/races/prev_race_id/prev_race_name/race-result.html",
-        "qualifying":           "https://www.formula1.com/en/results.html/2023/races/prev_race_id/prev_race_name/qualifying.html",
-        "practice-1":           "https://www.formula1.com/en/results.html/2023/races/prev_race_id/prev_race_name/practice-1.html",
-        "practice-2":           "https://www.formula1.com/en/results.html/2023/races/prev_race_id/prev_race_name/practice-2.html",
-        "practice-3":           "https://www.formula1.com/en/results.html/2023/races/prev_race_id/prev_race_name/practice-3.html",
-        "sprint":               "https://www.formula1.com/en/results.html/2023/races/prev_race_id/prev_race_name/sprint-results.html",
-        "sprint-shootout":      "https://www.formula1.com/en/results.html/2023/races/prev_race_id/prev_race_name/sprint-shootout.html",
-        "driver-of-the-day":    "https://www.formula1.com/en/latest/article.driver-of-the-day-2023.5wGE2ke3SFqQwabYVQXLnF.html",
-        "fastest-lap-on-race":  "https://www.formula1.com/en/results.html/2023/fastest-laps.html",
+        "all_races_url":        "https://www.formula1.com/en/results.html/2024/races.html",
+        "next_race_schedule":   "https://www.formula1.com/en/racing/2024/next_race_name.html",
+        "year_schedule":        "https://www.formula1.com/en/racing/2024.html",
+        "race":                 "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/race-result.html",
+        "qualifying":           "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/qualifying.html",
+        "practice-1":           "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/practice-1.html",
+        "practice-2":           "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/practice-2.html",
+        "practice-3":           "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/practice-3.html",
+        "sprint":               "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/sprint-results.html",
+        "sprint-shootout":      "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/sprint-shootout.html",
+        "driver-of-the-day":    "https://www.formula1.com/en/latest/article.driver-of-the-day-2024.5wGE2ke3SFqQwabYVQXLnF.html",
+        "fastest-lap-on-race":  "https://www.formula1.com/en/results.html/2024/fastest-laps.html",
         "driver_details_url":   "https://www.formula1.com/en/results.html/2023/drivers.html"
     }
 
@@ -95,6 +95,8 @@ class F1DataFetcher:
     
     guess_board = {}
 
+    is_testing = True
+
     #* New Structure:
     #*
     #* 1) For optimisation: at every startup, check if results have been fetchen 'today'
@@ -114,7 +116,26 @@ class F1DataFetcher:
 
 
     def __init__(self):
-        self.daily_fetch()
+        if not self.is_testing:
+            self.daily_fetch()
+        else:
+            logger.info("testing started")
+            test_data_set={}
+            with open(f"{TEST_DATA_PATH}","r") as f:
+                test_data_set = json.load(f)
+            self.prev_race_details     =test_data_set["prev_race_details"]
+            self.next_race_details     =test_data_set["next_race_details"]
+            self.next_grand_prix_events=test_data_set["next_grand_prix_events"]
+            self.prev_events_schedule  =test_data_set["prev_events_schedule"]
+            self.results_board         =test_data_set["results_board"]
+
+            with open(NEXT_EVENT_DATES_PATH,"w") as f:
+                json.dump(self.next_grand_prix_events,f,indent=4)
+
+            results_json = {self.prev_race_details["id"]: self.results_board}
+            with open(f"{RESULTS_PATH}","w") as f:
+                json.dump(results_json,f,indent=4)
+
 
     def daily_fetch(self):
         """once every day fetch the data"""
@@ -129,9 +150,8 @@ class F1DataFetcher:
         #if start_fetch: # no results exists / out of date
         self.sort_working_urls() #! SHOULD
         self.update_guess_schedule()
-        self.fetch_all_into_cache() #? IF not fetched today
+        #self.fetch_all_into_cache() #? IF not fetched today
         self.save_results_to_json() #? IF not fetched today
-
 
         if fetch_log:
             self.create_fetch_log(fetch_log)
@@ -184,6 +204,12 @@ class F1DataFetcher:
         """updates local-class id and name"""
         all_races_soup = self.request_and_get_soap(self.formula_one_urls["all_races_url"])
         all_races_names_data = all_races_soup.find_all('a', class_="dark bold ArchiveLink")
+        logger.info(f"{all_races_names_data = }")
+        if all_races_names_data == []:
+            self.prev_race_details["id"] = str(1226)
+            self.prev_race_details["name"] = "Abu Dhabi"
+            return 0
+
         all_races_names = [name.get_text().strip() for name in all_races_names_data]
         all_races_ids_data = all_races_soup.find_all('a', class_='ArchiveLink')
         all_races_ids = [name.get('href') for name in all_races_ids_data]
@@ -384,16 +410,19 @@ class F1DataFetcher:
         #! -> TESTING
 
     def event_in_schedule(self,event_name,event_url) -> bool:
-        """try to find if there was an event"""
+        """try to find if there was a specific type of event"""
         event_name = event_name.capitalize().replace('-', ' ')
         prev_event_soap = self.request_and_get_soap(event_url)
         # if there was no sprint, it returns the race board
         #  so have to find out if sprint is listed
         event_exist = prev_event_soap.find_all('ul',class_="resultsarchive-side-nav")
         event_exist_text = [name.get_text().strip() for name in event_exist]
+        logger.info(f"{event_exist_text = }")
+        if event_exist_text == []:
+            return True
         event_exist_list_dirty = event_exist_text[0].split('\n')
         event_exist_list = [elem.strip() for elem in event_exist_list_dirty if elem.strip()]
-        return (event_name in event_exist_list)
+        return (event_name in event_exist_list) # boolean
 
     def fetch_all_into_cache(self):
         
@@ -552,6 +581,13 @@ class F1DataFetcher:
     def get_drivers_details(self) -> dict:
         """return driver and team"""
         # for guess selection
+        if self.is_testing:
+            logger.info("drivers info - testing data")
+            test_data_set={}
+            with open(f"{TEST_DATA_PATH}","r") as f:
+                test_data_set = json.load(f)
+            drivers_info = test_data_set["drivers_info"]
+            return drivers_info
         drivers_soap = self.request_and_get_soap(self.formula_one_urls["driver_details_url"])
         surnames = drivers_soap.find_all('span', class_="hide-for-mobile")
         firstnames = drivers_soap.find_all('span', class_="hide-for-tablet")
@@ -564,6 +600,13 @@ class F1DataFetcher:
         return drivers_info
 
     def get_race_types(self) -> list:
+        if self.is_testing:
+            logger.info("race types list - testing data")
+            test_data_set={}
+            with open(f"{TEST_DATA_PATH}","r") as f:
+                test_data_set = json.load(f)
+            return_list = test_data_set["race_types_list"]
+            return return_list
         return_list = []
         if "sprint" in self.next_grand_prix_events:
             return_list = ["FP1","SO","S","Q1","Q2","Q3","Q_BOTR","R1","R2","R3","R_BOTR","DOTD","R_FAST","R_DNF"] # refine it into a for loop

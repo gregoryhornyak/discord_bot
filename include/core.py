@@ -1,5 +1,3 @@
-# This example requires the 'members' and 'message_content' privileged intents to function, therefore using intents=discord.Intents.all()
-
 #----< Imports >----#
 
 import discord
@@ -25,15 +23,6 @@ from PIL import Image, ImageFont, ImageDraw
 import random
 import calendar
 
-##
-## TODO
-##
-
-#----< Working directory >----#
-
-current_directory = os.getcwd()
-logger.info(f"{current_directory = }")
-
 #----< Bot init >----#
 
 bot = commands.Bot(command_prefix="/",intents=discord.Intents.all())
@@ -43,7 +32,7 @@ f1_module = f1_data.F1DataFetcher()
 @bot.event
 async def on_message(ctx:Interaction):
     if ctx.author.name != "lord_maldonado":
-        did_swear = [item for item in SWEAR_WORDS if item in ctx.content]
+        did_swear = [item for item in SWEAR_WORDS if item in ctx.content.lower()]
         if did_swear:
             await ctx.channel.send(random.choice(BLACK_LISTED_PHRASES))
 
@@ -65,20 +54,8 @@ async def on_ready():
             if line in message.content:
                 list_of_messages.append(message)
     await channel.delete_messages(list_of_messages,reason="Remove update-alert-message")
-
-    # create state file if not exists
-    locked = {"locked":False}
-    try:
-        with open(STATE_FILE_PATH,"r") as f:
-            locked = json.load(f)
-    except (json.decoder.JSONDecodeError, FileNotFoundError) as e:
-        logger.error(e)
-        with open(STATE_FILE_PATH,"w") as f:
-            json.dump(locked,f,indent=4)
-    finally:
-        logger.info(f"{locked = }")
-
-    man_version = get_manifest_version_info()
+        
+    man_version = "TEST"#get_manifest_version_info()
 
     with open(f"{MANIFEST_PATH}", "r") as f:
         manifest_info = json.load(f)
@@ -99,14 +76,37 @@ async def on_ready():
     await schedule_daily_message()
 
 
-@bot.tree.command(name="status",description="get bot status")
+@bot.tree.command(name="status",description="get bot's current state")
 async def bot_state(ctx:Interaction):
-    await ctx.response.send_message(f"{BOT_STATE = }")
+    next_event_details = f1_module.next_grand_prix_events
+    now = datetime.datetime.strftime(datetime.datetime.now,"%Y-%m-%d %H:%M:%S.%f")
+
+    descr = f"The bot is in **{BOT_STATE}** mode.\n"
+    now = datetime.datetime.now()
+    prev_race_details = f1_module.prev_race_details
+    descr += f"⏪ {prev_race_details['name']}({prev_race_details['id']})\n"
+    next_race_details = f1_module.next_race_details
+    descr += f"❎ Guessing for \n{next_race_details['name']}({next_race_details['id']})\n"
+    descr += f"⏩ {next_race_details['name']}({next_race_details['id']})\n"
+
+    bot_current_state = {}
+    with open(STATE_FILE_PATH,"r") as f:
+        bot_current_state = json.load(f)
+
+    for raceid in ["raceID_1","raceID_2","raceID_3"]:
+        racetime = bot_current_state[raceid]["date"]
+        if datetime.datetime.strptime(racetime,'%Y-%m-%d %H:%M:%S.%f') <= now:
+            bot_current_state[raceid]["when"] = "past"
+        else:
+            bot_current_state[raceid]["when"] = "future"
+
+    embed=discord.Embed(colour=0xFFFFFF,title="Bot state info",description=descr)
+    await ctx.response.send_message(embed=embed)
 
 def get_manifest_version_info():
     git_link = "https://raw.githubusercontent.com/gregoryhornyak/discord_bot/master/docs/manifest/manifest.json"
-    manifest = f1_data.requests.get(git_link).json()
-    return manifest['version']
+    #manifest = f1_data.requests.get(git_link).json()
+    return "TEST"
     
 async def schedule_daily_message():
     loop_counter = 0
@@ -115,8 +115,9 @@ async def schedule_daily_message():
         now = datetime.datetime.now()
 
         # do daily fetch
-        if now.hour == 6 and now.minute == 15:
-            f1_module.daily_fetch()
+        if now.hour == 21 and now.minute == 37:
+            #f1_module.daily_fetch()
+            pass
 
         next_grand_prix_events_time = {race_type: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for race_type,time in f1_module.next_grand_prix_events.items()}  
         delta = now.replace(second=0, microsecond=0) + datetime.timedelta(days = 1)
@@ -179,6 +180,7 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     next_race_name = f1_module.next_race_details['name']
     race_types_list = f1_module.get_race_types()
     logger.warning(f"{race_types_list = }")
+    logger.warning(f"{drivers_info = }")
 
     select_race = discord.ui.Select(placeholder="Choose a race!",
                                     options=[discord.SelectOption(
@@ -387,6 +389,9 @@ async def eval(ctx:Interaction):
     logger.info("Dumped users_db")
 
     logger.debug(f"{leader_board = }")
+
+    await ctx.followup.send(f"{leader_board}")
+
     leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
     profiles = [str(PROFILE_PICS_PATH+member_name+".png") for member_name in leader_board.keys()]
     await save_discord_members_pics(ctx)
@@ -394,8 +399,8 @@ async def eval(ctx:Interaction):
     if profiles:
         winner_name = profiles[0].split('/')[-1].split('.')[0]
     logger.info(f"{winner_name = }")
-    if len(profiles) > 1:
-        create_podium(profiles[0],profiles[1],profiles[2],race_name.capitalize(),str(datetime.datetime.now().year),winner_name)
+    #if len(profiles) > 1:
+     #   create_podium(profiles[0],profiles[1],profiles[2],race_name.capitalize(),str(datetime.datetime.now().year),winner_name)
     #await ctx.channel.send("Finished leaderboard")
     #await ctx.channel.send(file=discord.File("resources/uploads/winners.png"))
     
@@ -444,13 +449,13 @@ async def bonus(ctx:Interaction):
 
 #--------< Additional Functions >----#
 
-@bot.tree.command(name="showresults",description="-")
+@bot.tree.command(name="showresults",description="**DEBUG**")
 async def results(ctx:Interaction):
     results = f1_module.results_board
     logger.warning(f"{f1_module.prev_race_details['name'] = }")
     await ctx.channel.send(f"For {f1_module.prev_race_details['name']}:")
     pretty_json = json.dumps(results, indent=4)
-    await ctx.response.send_message(pretty_json)
+    await ctx.channel.send(pretty_json)
 
 
 @bot.tree.command(name="rules",description="-")
