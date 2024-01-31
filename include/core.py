@@ -395,16 +395,13 @@ async def eval(ctx:Interaction):
 
     logger.info("Saved users_db")
 
+    leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
+
     logger.debug(f"{leader_board = }")
 
     descr = ""
-    the_winner = True
-    for name, score in leader_board.items():
-        if the_winner:
-            descr+="You're Winner: "
-            the_winner = False
-        descr += f"{name} - {score} points\n"
-
+    for index, (name, score) in enumerate(leader_board.items()):
+        descr += f"{index}. {name} - {score} pts\n"
 
     embed=discord.Embed(colour=0xFFFFFF,title="LEADERBOARD",description=descr)
     #await ctx.response.send_message()
