@@ -3,29 +3,32 @@
 - docs:
   - images:
     - **figures.png**
+  - manifest
   - **commands**
-  - **layout**
-  - **user stories**
-  - **rules**
+  - **repo_layout**
 - sample:
   - **basic disc bot**
 - resources:
   - logs:
     - **logs**
-  - lookup_tables:
-    - **users scores**
-  - **guesses.json**  
-  - disc-token:
+  - password  
+  - token:
     - **token**
   - uploads:
     - **png files**
+  - tests
+  - inventory
+  - data
+  - config
 - include:
+  - **constants**
   - **db_manager**
   - **f1_schedule**
   - **logging**
   - **core**
-- tests
+
 - **LICENCE**
 - **README**
 - **requirements**
-- **setup**
+- **setup_env**
+- **bot_loop**

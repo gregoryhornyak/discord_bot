@@ -6,16 +6,20 @@
     - FirstPlace: *FP3*
 
 - Qualification:
-    - FirstPlace: *Q1st*
-    - SecondPlace: *Q2nd*
-    - ThirdPlace: *Q3rd*
+    - FirstPlace: *Q1*
+    - SecondPlace: *Q2*
+    - ThirdPlace: *Q3*
     - BestOfTheRest: *Q-BOTR*
 
+- Sprint:
+    - Sprint Shootout: *SO*
+    - Sprint: *S*
+
 - Race:
-    - FirstPlace: *R1st*
-    - SecondPlace: *R2nd*
-    - ThirdPlace: *R3rd*
+    - FirstPlace: *R1*
+    - SecondPlace: *R2*
+    - ThirdPlace: *R3*
     - BestOfTheRest: *R-BOTR*
-    - DriverOfTheDay: *R-DOTD*
+    - DriverOfTheDay: *DOTD*
     - FastestLap: *R-FAST*
     - NumberofDNF: *R-DNF*

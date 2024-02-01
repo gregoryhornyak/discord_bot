@@ -1,11 +1,12 @@
 import json
 
-#* INCLUDES FILES AS WELL
 UPCOMING_DATE_PATH =    "resources/data/upcoming_date"
-RESULTS_PATH =          "resources/data/results.json"
+PREV_GP_DETAILS_PATH =  "resources/data/prev_gp_details.json"
+NEXT_GP_DETAILS_PATH =  "resources/data/next_gp_details.json"
+NEXT_GP_DRIVERS_INFO_PATH =  "resources/data/next_gp_drivers_info.json"
+NEXT_GP_CATEGORIES_PATH =  "resources/data/next_gp_categories.json"
 FETCH_LOG_PATH =        "resources/data/fetch_log.json"
-YEAR_SCHEDULE_PATH =    "resources/data/year_dates.json"
-NEXT_EVENT_DATES_PATH = "resources/data/next_grand_prix_details.json"
+YEAR_SCHEDULE_PATH =    "resources/data/whole_year_gp_dates.json"
 TOKEN_PATH =        "resources/token/token"
 PASSW_PATH =        "resources/password/passw"
 UPLOADS_PATH =          "resources/uploads/"
@@ -24,8 +25,7 @@ PROFILE_PICS_PATH = "resources/uploads/"
 STATE_FILE_PATH = "resources/config/state.json"
 TEST_DATA_PATH = "resources/tests/test_data.json"
 
-CHANNEL_ID = 1078427611597906004
-SERVER_ID = 1078427611597906001
+SERVER_CHANNEL_ID_PATH = "resources/config/discord_info.json"
 
 ALERT_CHECK_DELAY = 55
 

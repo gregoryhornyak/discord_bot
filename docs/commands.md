@@ -6,12 +6,11 @@
 
 `guess`: to make a guess (menu) and save it
 
+`myguess`: to see your guesses for the current grand prix
+
 `dnf`: to guess number of dnf 
 
-`myguess`: to see your guesses for the current event (png)
+`eval`: to see the overall final score (png)
 
-`setdate`: to set the next event's date
-
-`eval`: to see the final score (png)
-
+`info`: get info about session times
 
