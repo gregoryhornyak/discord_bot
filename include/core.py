@@ -132,7 +132,7 @@ async def upgrade(interaction:Interaction,password:str):
     logger.info(f"password entered: {password}")
     with open(f"{PASSW_PATH}",'r') as f:
         logger.info(f"{password}!={f.read()} -> {password!=f.read()}")
-        if password!=f.read():
+        if password!=f.read().strip():
             await interaction.response.send_message("Wrong password")
             return 0
     logger.info("Bot shuts down and upgrades")
