@@ -130,8 +130,9 @@ async def guess_agent():
 async def upgrade(interaction:Interaction,password:str):    
     """reboots the whole bot, and updates it from Github"""
     with open(f"{PASSW_PATH}",'r') as f:
-        logger.info(f"{password}!={f.read().strip()} is {password!=f.read().strip()}")
-        if password!=f.read().strip():
+        found_pw = f.read().strip()
+        logger.info(f"{password}!={found_pw} is {password!=found_pw}")
+        if password!=found_pw:
             await interaction.response.send_message("Wrong password")
             return 0
     logger.info("Bot shuts down and upgrades")
