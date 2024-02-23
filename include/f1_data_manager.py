@@ -305,6 +305,8 @@ class F1DataFetcher:
         next_event_soap_ids = [name.get('data-meetingkey') for name in next_event_soap_findings] # URLs
         next_event_id_and_url = list(zip(next_event_soap_hrefs,next_event_soap_ids))
         next_event_id_and_url_json = {event_id: event_url for event_url, event_id in next_event_id_and_url}
+        year_schedule_json = {event_id: {"url": event_url,"completed":False} for event_id,event_url in next_event_id_and_url_json}
+        logger.info(f"{year_schedule_json = }")
         with open(f"{YEAR_SCHEDULE_PATH}","w") as f:
             json.dump(next_event_id_and_url_json,f,indent=4)
         self.grand_prix_calendar_urls = next_event_id_and_url_json
