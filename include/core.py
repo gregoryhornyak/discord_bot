@@ -131,7 +131,7 @@ async def upgrade(interaction:Interaction,password:str):
     """reboots the whole bot, and updates it from Github"""
     logger.info(f"password entered: {password}")
     with open(f"{PASSW_PATH}",'r') as f:
-        logger.info(f"{password}!={f.read()} -> {password!=f.read()}")
+        logger.info(f"{password}!={f.read().strip()} -> {password!=f.read().strip()}")
         if password!=f.read().strip():
             await interaction.response.send_message("Wrong password")
             return 0
