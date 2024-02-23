@@ -86,7 +86,7 @@ class F1DataFetcher:
     #* Best three teams - for BestOfTheRest
     best_three = ['FERRARI','RED BULL RACING HONDA RBPT','MERCEDES']
 
-    #* All the formula one urls - driver is using 2023
+    #* All the formula one urls - driver is using 2023 -> needs to be changed into 2024
     formula_one_urls = {
         "all_past_races_url":   "https://www.formula1.com/en/results.html/2023/races.html",
         "all_races_url":        "https://www.formula1.com/en/results.html/2024/races.html",

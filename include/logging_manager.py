@@ -3,7 +3,7 @@ from include.constants import *
 
 logging.basicConfig(
     level=logging.DEBUG,
-    format='[%(asctime)s.%(msecs)03d]: %(levelname)s \t %(message)s', datefmt="%M:%S")
+    format='[%(asctime)s.%(msecs)03d]: %(levelname)s %(funcName)s \t %(message)s', datefmt="%M:%S")
 
 # https://docs.python.org/3/library/logging.html#logging.Formatter
 

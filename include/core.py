@@ -161,6 +161,7 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     next_race_id = f1_module.get_next_gp_id()
     next_race_name = f1_module.get_next_gp_name()
     categories_list = f1_module.get_categories()
+    logger.info(f"{categories_list = } {drivers_info = }")
 
     select_race = discord.ui.Select(placeholder="Choose a category!",
                                     options=[discord.SelectOption(
@@ -463,7 +464,7 @@ Rules for guessing:
     await interaction.response.send_message(rule_book)
 
 @bot.tree.command(name="getlogs",description="ADMIN - show logs ")
-async def getlogs(interaction:Interaction, num_of_lines:int=500):
+async def getlogs(ctx:discord.Interaction, num_of_lines:int=500):
     """ send logs as pdf to report"""
     logger.info(f"getlogs with {num_of_lines} lines")
     try:
@@ -476,9 +477,10 @@ async def getlogs(interaction:Interaction, num_of_lines:int=500):
         for line in lines:
             file.write(line)
     logger.info(f"botlogs_extract.md populated")
-    cmd = f'pandoc {BOT_LOGS_EXT_MD_PATH} -o {BOT_LOGS_EXT_PDF_PATH}_{num_of_lines}.pdf'
-    os.system(cmd)        
-    await interaction.response.send_message(file=discord.File(BOT_LOGS_EXT_PDF_PATH+"_"+str(num_of_lines)+".pdf"),delete_after=6)
+    cmd = f'pandoc --pdf-engine=xelatex --variable "monofont:docs/FreeMono.otf" {BOT_LOGS_EXT_MD_PATH} -o {BOT_LOGS_EXT_PDF_PATH}'
+    os.system(cmd)    
+    logger.info(f'sending {BOT_LOGS_EXT_PDF_PATH+"_"+str(num_of_lines)+".pdf"}')
+    await ctx.response.send_message(file=discord.File(BOT_LOGS_EXT_PDF_PATH),delete_after=6)
 
     # only send back last N number of lines to reduce file size
 
@@ -563,9 +565,9 @@ async def whoami(ctx:Interaction):
 @bot.tree.command(name="info",description="-")
 async def info(ctx:Interaction):
     # export this dict compr to F1_module as func
-    next_event_details = {r_t: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for r_t,time in f1_module.next_grand_prix_events.items()}
-
-    descr = f"The bot is in **{BOT_STATE}** mode.\n"
+    next_event_details = {r_t: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for r_t,time in f1_module.next_gp_details["sessions"].items()}
+    descr=""
+    #descr = f"The bot is in **{BOT_STATE}** mode.\n"
     disp_minute = ""
     
     for r_t,time in next_event_details.items():
@@ -574,7 +576,8 @@ async def info(ctx:Interaction):
         else:
             disp_minute = str(time.minute)
         descr += f"{time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{disp_minute} - {r_t}\n"
-    embed=discord.Embed(colour=0xFFFFFF,title="Race Information",description=descr)
+    location = f1_module.get_next_gp_name()
+    embed=discord.Embed(colour=0xFFFFFF,title=f"Race Information\n{location}",description=descr)
     await ctx.response.send_message(embed=embed)
 
 @bot.tree.command(name="hello",description="-")
@@ -583,14 +586,15 @@ async def hello(ctx:Interaction):
 
 @bot.tree.command(name="help",description="-")
 async def embed_test(ctx:Interaction):
-    descr = f"First, take your guesses by **/guess**\n\
-    Then wait until the race completes\n\
+    descr = f"-------------------------------------------------------------------------------\n\
+    First, take your guesses by **/guess**\n\
+    Then wait until the grand prix completes\n\
     Finally evaluate your score by **/eval**\n\
     In the meanwhile,\n\
     you can see your guess by **/myguesses**\n\
     and you can see your point by **/mypoints**\n\
     And of course invoke many *funny* commands as well\n\
-    \nGood luck! 😁🏁"
+    \nGood luck! 😁🏁\n*the developer*"
     embed=discord.Embed(title="Tutorial",
                         description=descr,
                         color=0xFF5733)

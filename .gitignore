@@ -5,3 +5,6 @@ venv/
 resources/
 __pycache__/
 archive
+aws_password
+access_aws_ssh
+f1bot_key.pem

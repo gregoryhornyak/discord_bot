@@ -18,8 +18,8 @@ GUESS_DB_PATH =     "resources/inventory/guess_db.json"
 SCORE_TABLE_PATH =  "resources/inventory/score_table.json"
 USERS_DB_PATH =     "resources/inventory/users_db.json"
 LOGS_PATH =             "resources/logs/botlogs.log"
-BOT_LOGS_EXT_MD_PATH =     "resources/logs/botlogs_extract.md"
-BOT_LOGS_EXT_PDF_PATH =     "resources/logs/botlogs_extract"
+BOT_LOGS_EXT_MD_PATH =      "resources/logs/botlogs_extract.md"
+BOT_LOGS_EXT_PDF_PATH =     "resources/logs/botlogs_extract.pdf"
 MANIFEST_PATH =     "docs/manifest/manifest.json"
 PROFILE_PICS_PATH = "resources/uploads/"
 STATE_FILE_PATH = "resources/config/state.json"
@@ -38,7 +38,7 @@ Latest update: latest_update"
 BOT_START_DETAILS_MESSAGE_LINE = "Latest update"
 BOT_START_SHORT_MESSAGE = "Bot is on"
 
-BOT_STATE = "TEST" # TEST | ALPHA | STABLE
+BOT_STATE = "STABLE" # TEST | ALPHA | STABLE
 
 BLACK_LISTED_PHRASES = ["Ne káromkodjál, mert pofán baszlak!",
                  "Még egy ilyen és szájba kúrlak!",
