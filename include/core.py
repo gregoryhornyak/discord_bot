@@ -127,9 +127,11 @@ async def guess_agent():
     pass
 
 @bot.tree.command(name="upgrade",description="ADMIN - reboots and updates bot")
-async def upgrade(interaction:Interaction,password:str):
+async def upgrade(interaction:Interaction,password:str):    
     """reboots the whole bot, and updates it from Github"""
+    logger.info(f"password entered: {password = }")
     with open(f"{PASSW_PATH}",'r') as f:
+        logger.info(f"password stored: {f.read()}")
         if password!=f.read():
             await interaction.response.send_message("Wrong password")
             return 0
