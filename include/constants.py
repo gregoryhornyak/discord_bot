@@ -1,5 +1,7 @@
 import json
 
+# paths
+
 UPCOMING_DATE_PATH =    "resources/data/upcoming_date"
 PREV_GP_DETAILS_PATH =  "resources/data/prev_gp_details.json"
 NEXT_GP_DETAILS_PATH =  "resources/data/next_gp_details.json"
@@ -27,7 +29,11 @@ TEST_DATA_PATH = "resources/tests/test_data.json"
 
 SERVER_CHANNEL_ID_PATH = "resources/config/discord_info.json"
 
+# time delays
+
 ALERT_CHECK_DELAY = 55
+
+# messages
 
 BOT_SHUTDOWN_UPGRD_MESSAGE = "Bot is shutting down and will be upgraded..."
 BOT_START_DETAILS_MESSAGE = f"bot_name\n\
@@ -47,3 +53,7 @@ BLACK_LISTED_PHRASES = ["Ne káromkodjál, mert pofán baszlak!",
 
 SWEAR_WORDS = ["fasz", "bazd", "geci", "kurva", "baszki", "segg", "pina", "anyád", "szar", "buzi", "cigány", "cibbon"]
 GRATULATION_PHRASES = ["Bravo","Kudos","Superb"]
+
+# date formats
+
+LONG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
