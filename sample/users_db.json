@@ -1,0 +1,30 @@
+{
+    "USER_ID":{
+        "user_name":"USERNAME",
+        "grand_prix":{
+            "gp_id":{
+                "name":"NAME",
+                "results": {
+                    "FP1": "",
+                    "FP2": "",
+                    "FP3": "",
+                    "SO": "",
+                    "S": "",
+                    "Q1": "",
+                    "Q2": "",
+                    "Q3": "",
+                    "Q_BOTR": "",
+                    "R1": "",
+                    "R2": "",
+                    "R3": "",
+                    "R_BOTR": "",
+                    "DOTD": "",
+                    "R_FAST": "",
+                    "R_DNF": ""
+                },
+                "gp_total_points":0
+            }
+        },
+        "total_points":"X"
+    }
+}
