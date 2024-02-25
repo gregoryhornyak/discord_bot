@@ -37,15 +37,24 @@ bot = commands.Bot(command_prefix="/",intents=discord.Intents.all())
 
 f1_module = f1_data.F1DataFetcher()
 
+def get_channel_info(to_return="CHANNEL_ID"):
+    """to_return = channel_id / server_id"""
+    with open(f"{SERVER_CHANNEL_ID_PATH}","r") as f:
+        discord_data = json.load(f)
+    if to_return.lower() == "channel_id":
+        return discord_data["CHANNEL_ID"]
+    elif to_return.lower() == "server_id":
+        return discord_data["SERVER_ID"]
+
 @bot.event
 async def on_ready():
     logger.info(f'Logging in as {bot.user}')
     # synchronise commands globally
-    with open(f"{SERVER_CHANNEL_ID_PATH}","r") as f:
-        discord_data = json.load(f)
-    bot.tree.copy_global_to(guild=discord.Object(id=discord_data["SERVER_ID"]))
-    await bot.tree.sync(guild=discord.Object(id=discord_data["SERVER_ID"]))
-    channel = bot.get_channel(discord_data["CHANNEL_ID"])
+    server_id = get_channel_info("SERVER_ID")
+    channel_id = get_channel_info("CHANNEL_ID")
+    bot.tree.copy_global_to(guild=discord.Object(id=server_id))
+    await bot.tree.sync(guild=discord.Object(id=server_id))
+    channel = bot.get_channel(channel_id)
     
     await channel.send("Bot started",silent=True)
 
@@ -70,7 +79,7 @@ async def on_message(ctx:Interaction):
 @bot.tree.command(name="status",description="get bot's current state")
 async def bot_state(ctx:Interaction):
     next_event_details = f1_module.next_grand_prix_events
-    now = datetime.datetime.strftime(datetime.datetime.now,"%Y-%m-%d %H:%M:%S.%f")
+    now = datetime.datetime.strftime(datetime.datetime.now,LONG_DATE_FORMAT)
 
     descr = f"The bot is in **{BOT_STATE}** mode.\n"
     now = datetime.datetime.now()
@@ -86,7 +95,7 @@ async def bot_state(ctx:Interaction):
 
     for raceid in ["raceID_1","raceID_2","raceID_3"]:
         racetime = bot_current_state[raceid]["date"]
-        if datetime.datetime.strptime(racetime,'%Y-%m-%d %H:%M:%S.%f') <= now:
+        if datetime.datetime.strptime(racetime,LONG_DATE_FORMAT) <= now:
             bot_current_state[raceid]["when"] = "past"
         else:
             bot_current_state[raceid]["when"] = "future"
@@ -107,7 +116,7 @@ async def notification_agent():
             f1_module.daily_fetch()
             pass
 
-        next_grand_prix_events_time = {category: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for category,time in f1_module.next_gp_details["sessions"].items()}  
+        next_grand_prix_events_time = {category: datetime.datetime.strptime(time,LONG_DATE_FORMAT) for category,time in f1_module.next_gp_details["sessions"].items()}  
         delta = now.replace(second=0, microsecond=0) + datetime.timedelta(days = 1)
         for r_t, time in next_grand_prix_events_time.items():
             if time.month == delta.month and time.day == delta.day and time.hour == delta.hour and time.minute == delta.minute:
@@ -211,33 +220,28 @@ async def dnf(interaction: discord.Interaction, count: int):
     logger.info(f"{interaction.user.name}: R_DNF - {count} for {next_race_name.capitalize()}")
 
 @bot.tree.command(name="eval",description="-")
-async def eval(ctx:Interaction):
+async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses
     could only happen after the race"""
-    with open(f"{SERVER_CHANNEL_ID_PATH}","r") as f:
-        discord_data = json.load(f)
-    channel = bot.get_channel(discord_data["CHANNEL_ID"])
 
+    # need some time
     await ctx.response.defer()
 
-    scores_json = {}
-    with open(f"{SCORE_TABLE_PATH}","r") as f:
-        scores_json = json.load(f)
+    # f1 data
 
-    # EVALUATING
+    gp_id = f1_module.get_prev_gp_id()
+    race_name = f1_module.get_prev_gp_name()
 
-    # 1. find all the users who guessed (if didnt, out of game)
-    # 2. if more guesses under same category then latest matters.
-    # 3. if didnt guess in a category then doesn't get points
-    # 4. assign score board value
+    if gp_id == "---":
+        await ctx.followup.send("Before season - no results yet.")
+        return 0
 
-    # files needed:
-    # - guess_db
-    # - prev_gp_details.results
-    # - score_table
-    # - users_db
+    # results - official results
+    # existence assured by f1_module
+    results = f1_module.get_all_results()
 
-    # guess_db - users' guesses on race results
+    #* read in all data
+    #*  GUESS_DB
     try:
         with open(f"{GUESS_DB_PATH}", "r") as f:
             guess_db = json.load(f)
@@ -251,47 +255,15 @@ async def eval(ctx:Interaction):
     guess_db.reset_index(inplace=True)
     guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
     guess_db_reversed = guess_db.iloc[::-1]
-    #logger.info(f"{guess_db_reversed = }")
-
-    # f1 data
-
-    race_id = f1_module.get_prev_gp_id()
-    race_name = f1_module.get_prev_gp_name()
-
-    # results - official results
-    # existence assured by f1_module
-    results = f1_module.get_all_results()
-
-    # collect score table entries
+    
+    #* SCORE-TABLE 
     try:
         with open(f'{SCORE_TABLE_PATH}', 'r') as f:
             scoring_board = json.load(f)
-    except FileNotFoundError:
-        logger.warning("Missing scoring table!")
-        scoring_board = {
-        "FP1": 3,
-        "FP2": 2,
-        "FP3": 1,
-        "SH": 2,
-        "S": 1,
-        "Q1": 3,
-        "Q2": 2,
-        "Q3": 1,
-        "Q_BOTR": 1,
-        "R1": 5,
-        "R2": 3,
-        "R3": 2,
-        "R_BOTR": 1,
-        "DOTD": 1,
-        "R_FAST": 1,
-        "R_DNF": 1
-        }
-        logger.info("Creating score_table.json")
-        with open(f'{SCORE_TABLE_PATH}', 'w') as f:
-            json.dump(scoring_board,f,indent=4)
-
-    # users_db
-    users_db = {}
+    except Exception as e:
+        logger.error(e)
+        
+    #* USERS_DB
     try:
         with open(f'{USERS_DB_PATH}', 'r') as f:
             users_db = json.load(f)
@@ -299,19 +271,27 @@ async def eval(ctx:Interaction):
         logger.warning("NO USERS_DB_JSON")
         with open(f'{USERS_DB_PATH}', 'w') as f:
             json.dump(users_db,f,indent=4)
+        users_db = {}
     
+
     # collect users
 
     members = get_discord_members(ctx)
 
     # --- all resources are collected
 
+    # EVALUATING
+
+    # 1. find all the users who guessed (if didnt, out of game)
+    # 2. if more guesses under same category then latest matters.
+    # 3. if didnt guess in a category then doesn't get points
+    # 4. assign score board value
+
     #
     # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
     #
 
-    logger.info(f"{f1_module.prev_gp_details['id'] = }")
-    logger.info(f"{f1_module.next_gp_details['id'] = }")
+    logger.info(f"{f1_module.prev_gp_details = }")
 
     ## ready for evaluation  
 
@@ -338,22 +318,28 @@ async def eval(ctx:Interaction):
 
                         logger.debug(f"{race_name = }")
 
-                        if str(user_id) not in users_db:                            
-                            users_db[str(user_id)] = {"user_name": user_name,"round_score": {},"total_points": 0}
-                        if str(race_id) not in users_db[str(user_id)]["round_score"]:
-                            users_db[str(user_id)]["round_score"][str(race_id)] = {}
-                        if "date" not in users_db[str(user_id)]["round_score"][str(race_id)]:
-                            users_db[str(user_id)]["round_score"][str(race_id)]["date"] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
-                        if "location" not in users_db[str(user_id)]["round_score"][str(race_id)]:
-                            users_db[str(user_id)]["round_score"][str(race_id)]["location"] = race_name
-                        """
-                        if "evaluated" not in users_db[str(user_id)]["round_score"][str(race_id)]:
-                            users_db[str(user_id)]["round_score"][str(race_id)]["evaluated"] = "False"
-                        """
-                        if "score_board" not in users_db[str(user_id)]["round_score"][str(race_id)]:
-                            users_db[str(user_id)]["round_score"][str(race_id)]["score_board"] = {}
+                        if str(user_id) not in users_db:
+                            users_db[str(user_id)] = {
+                                "user_name": user_name,
+                                "grand_prix": {},
+                                "total_points": 0
+                                }
+                        if str(gp_id) not in users_db[str(user_id)]["grand_prix"]:
+                            users_db[str(user_id)]["grand_prix"][str(gp_id)] = {}
+                        
+                        if "date" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["date"] = ""
+                        if "name" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["name"] = race_name
+                        if "results" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"] = {}
+                        if "gp_total_points" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = 0
+                        
                         # but not change for points, to restrict overwriting guesses
-                        users_db[str(user_id)]["round_score"][str(race_id)]["score_board"][category] = point # if not DNF
+                        users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"][category] = point # if not DNF
+                        
+                        
                         
     await ctx.followup.send("Finished evaluating")
 
@@ -567,7 +553,7 @@ async def whoami(ctx:Interaction):
 @bot.tree.command(name="info",description="-")
 async def info(ctx:Interaction):
     # export this dict compr to F1_module as func
-    next_event_details = {r_t: datetime.datetime.strptime(time,'%Y-%m-%d %H:%M:%S.%f') for r_t,time in f1_module.next_gp_details["sessions"].items()}
+    next_event_details = {r_t: datetime.datetime.strptime(time,LONG_DATE_FORMAT) for r_t,time in f1_module.next_gp_details["sessions"].items()}
     descr=""
     #descr = f"The bot is in **{BOT_STATE}** mode.\n"
     disp_minute = ""
@@ -588,14 +574,13 @@ async def hello(ctx:Interaction):
 
 @bot.tree.command(name="help",description="-")
 async def embed_test(ctx:Interaction):
-    descr = f"-------------------------------------------------------------------------------\n\
-    First, take your guesses by **/guess**\n\
-    Then wait until the grand prix completes\n\
-    Finally evaluate your score by **/eval**\n\
-    In the meanwhile,\n\
-    you can see your guess by **/myguesses**\n\
-    and you can see your point by **/mypoints**\n\
-    And of course invoke many *funny* commands as well\n\
+    descr = f"First, take your guesses by **/guess**\n\
+Then wait until the grand prix completes\n\
+Finally evaluate your score by **/eval**\n\
+In the meanwhile,\n\
+you can see your guess by **/myguesses**\n\
+and you can see your point by **/mypoints**\n\
+And of course invoke many *funny* commands as well\n\
     \nGood luck! 😁🏁\n*the developer*"
     embed=discord.Embed(title="Tutorial",
                         description=descr,
@@ -617,7 +602,7 @@ async def vitya(ctx:Interaction):
 @bot.tree.command(name="lajos",description="-")
 async def lajos(ctx:Interaction, pia:str="palinka"):
     await ctx.response.defer()
-    channel = bot.get_channel(CHANNEL_ID)
+    channel = bot.get_channel(get_channel_info("channel_id"))
     logger.info("lajos már régen volt az neten bazdmeg")
     script = f"""- Szia Lajos. 👋
 -       Szia bazdmeg! Kutyáidat sétáltatod?
