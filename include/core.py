@@ -218,7 +218,7 @@ async def dnf(interaction: discord.Interaction, count: int):
     next_race_name = f1_module.next_gp_details['name']
     count = abs(count)
     db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_race_id)
-    await interaction.response.send_message(f'You guessed {count} number of DNF(s)', ephemeral=True)
+    await interaction.response.send_message(f'<{interaction.user.name} guessed {count} number of DNF(s)>')
     logger.info(f"{interaction.user.name}: R_DNF - {count} for {next_race_name.capitalize()}")
 
 @bot.tree.command(name="eval",description="-")
