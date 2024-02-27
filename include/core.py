@@ -203,7 +203,7 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
                           select_race=select_race.values[0],
                           select_driver=select_driver.values[0],
                           next_race_id=next_race_id) # dnf=False
-        await sub_interaction.response.send_message(f"{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}",silent=True)
+        await sub_interaction.response.send_message(f"<{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}>",silent=True)
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
