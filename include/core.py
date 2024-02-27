@@ -118,7 +118,9 @@ async def notification_agent():
 
         next_grand_prix_events_time = {category: datetime.datetime.strptime(time,LONG_DATE_FORMAT) for category,time in f1_module.next_gp_details["sessions"].items()}  
         delta = now.replace(second=0, microsecond=0) + datetime.timedelta(days = 1)
+        delta_3_days = now.replace(second=0, microsecond=0) + datetime.timedelta(days = 3)
         for r_t, time in next_grand_prix_events_time.items():
+            # 2024-02-29 11:30:00.000000
             if time.month == delta.month and time.day == delta.day and time.hour == delta.hour and time.minute == delta.minute:
                 await channel.send(f"{r_t} starts in 1 day!") # seems oke
             if now.month == time.month and now.day == time.day and now.hour+2 == time.hour and now.minute == time.minute:
@@ -195,7 +197,7 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     async def button_callback(sub_interaction:Interaction):
         name = sub_interaction.user.name
         id = sub_interaction.user.id
-        logger.info(f"{name}: {select_race.values[0]} - {select_driver.values[0]} for {next_race_name.capitalize()}")
+        logger.info(f"{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}")
         db_man.save_guess(name=name,
                           id=id,
                           select_race=select_race.values[0],
@@ -339,24 +341,24 @@ async def eval(ctx:discord.Interaction):
                         # but not change for points, to restrict overwriting guesses
                         users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"][category] = point # if not DNF
                         
-                        
-                        
     await ctx.followup.send("Finished evaluating")
 
-    logger.info("eval finished")
+    logger.info("Evaluation completed")
 
     # sum up the points
     leader_board = {}
-    for the_rest in users_db.values():
+    """
+    for user_id,user_info in users_db.items():
         local_score = 0
-        for race_list in the_rest["round_score"].values():
+        if "grand_prix" in user_info.keys():
+            user_info["grand_prix"]
+        for  in user_info.items():
             for key, race_details in race_list.items():
                 if key == "score_board":
                     for point in race_details.values():
                         local_score += int(point)
-        the_rest["total_points"] = local_score
         leader_board[the_rest["user_name"]] = local_score
-
+    """
     with open(f'{USERS_DB_PATH}', 'w') as f:
         json.dump(users_db,f,indent=4)
 
