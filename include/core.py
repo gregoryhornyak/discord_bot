@@ -544,11 +544,11 @@ async def dadjoke(ctx:Interaction):
     cmd = 'curl -H "Accept: application/json" https://icanhazdadjoke.com/'
     output = subprocess.check_output(cmd, shell=True,text=True)
     joke_json = json.loads(output)
-    await ctx.response.send_message(f'Dad joke of the day:\n{joke_json["joke"]}')
+    await ctx.response.send_message(f'Dad joke of the day:\n{joke_json["joke"]}',ephemeral=True)
 
 @bot.tree.command(name="whoami",description="-")
 async def whoami(ctx:Interaction):
-    await ctx.response.send_message(f"You are {ctx.user.name},\nHey <@{ctx.user.id}>")
+    await ctx.response.send_message(f"You are {ctx.user.name},\nHey <@{ctx.user.id}>",ephemeral=True)
 
 @bot.tree.command(name="info",description="-")
 async def info(ctx:Interaction):
@@ -570,7 +570,7 @@ async def info(ctx:Interaction):
 
 @bot.tree.command(name="hello",description="-")
 async def hello(ctx:Interaction):
-    await ctx.response.send_message(f"Hello there! {ctx.guild.default_role}")
+    await ctx.response.send_message(f"Hello there! {ctx.guild.default_role}",ephemeral=True)
 
 @bot.tree.command(name="help",description="-")
 async def embed_test(ctx:Interaction):
@@ -586,7 +586,7 @@ And of course invoke many *funny* commands as well\n\
     embed=discord.Embed(title="Tutorial",
                         description=descr,
                         color=0xFF5733)
-    await ctx.response.send_message(embed=embed)
+    await ctx.response.send_message(embed=embed,ephemeral=True)
 
 @bot.tree.command(name="pina",description="fúú, te kibaszott perverz")
 async def pina(ctx:Interaction):
@@ -598,12 +598,12 @@ async def fasz(ctx:Interaction):
 
 @bot.tree.command(name="jo_isten_kuldte_hozzank_le",description="-")
 async def vitya(ctx:Interaction):
-    await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"vitya.png"),silent=True)
+    await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"vitya.png"),ephemeral=True)
 
 @bot.tree.command(name="kozso",description="-")
 async def kozso(ctx:Interaction):
     kozso_lines = ["A delfinek.. a víz alatt.. nagyon jó emberek!","Az éérzéések, a szerelem, az ébredések, a kaják, a vizek, a min-mindent imádok, miindent pozitiven csak!"]
-    await ctx.response.send_message(random.choice(kozso_lines))
+    await ctx.response.send_message(random.choice(kozso_lines),ephemeral=True)
 
 @bot.tree.command(name="lajos",description="-")
 async def lajos(ctx:Interaction, pia:str="palinka"):
@@ -625,10 +625,10 @@ async def lajos(ctx:Interaction, pia:str="palinka"):
 - Szia 👋 """
     if pia == "palinka":
         for line in script.split('\n'):
-            await channel.send(line,silent=True)
+            await channel.send(line,ephemeral=True)
     elif pia == "vodka":
-        await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi? ||")
-    await ctx.followup.send("---")
+        await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi? ||",ephemeral=True)
+    await ctx.followup.send("---",ephemeral=True)
 
 ### UNSTABLE
 
