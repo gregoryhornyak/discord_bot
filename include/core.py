@@ -499,8 +499,11 @@ async def myguess(ctx:discord.Interaction):
     #! TEST if multiple users create histories, and all files have the same name -> conflict or time delay is enough
 
     cmd = f'pandoc {USER_GUESS_HISTORY_PATH} -o {USER_GUESS_HISTORY_PDF_PATH}.pdf'
+    logger.info("markdown to pdf")
     cmd2 = f'pdftoppm {USER_GUESS_HISTORY_PDF_PATH}.pdf {USER_GUESS_HISTORY_PDF_PATH} -png'
+    logger.info("pdf to png")
     cmd3 = f'convert {USER_GUESS_HISTORY_PDF_PATH}-1.png -crop 500x500+350+235 {USER_GUESS_HISTORY_PDF_PATH}_zoomed.png'
+    logger.info("cropped png")
     os.system(cmd)
     os.system(cmd2)
     os.system(cmd3)
