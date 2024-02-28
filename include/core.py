@@ -434,15 +434,6 @@ async def bonus(ctx:Interaction):
 
 #--------< Additional Functions >----#
 
-@bot.tree.command(name="showresults",description="**DEBUG**")
-async def results(ctx:Interaction):
-    results = f1_module.results_board
-    logger.warning(f"{f1_module.prev_gp_details['name'] = }")
-    await ctx.channel.send(f"For {f1_module.prev_gp_details['name']}:")
-    pretty_json = json.dumps(results, indent=4)
-    await ctx.channel.send(pretty_json)
-
-
 @bot.tree.command(name="rules",description="-")
 async def rules(interaction:Interaction):
     rule_book = """
@@ -475,14 +466,19 @@ async def getlogs(ctx:discord.Interaction, num_of_lines:int=500):
     # only send back last N number of lines to reduce file size
 
 @bot.tree.command(name="myguesses",description="Show user's guesses for next grand prix")
-async def myguess(ctx:discord.Interaction):
+async def myguess(ctx:discord.Interaction,username:str=""):
     with open(f"{GUESS_DB_PATH}", "r") as f:
             guesses_database = json.load(f)
     user_guesses = f1_data.pd.DataFrame.from_dict(guesses_database, orient='index')
     user_guesses.reset_index(inplace=True)
     user_guesses.rename(columns={'index': 'time_stamp'}, inplace=True)
     user_guesses_reversed = user_guesses.iloc[::-1]
-    user_name = ctx.user.name
+    #user_name = ctx.user.name
+    user_name = ""
+    if username:
+        user_name = username
+    else:   
+        user_name = ctx.user.name
     cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user_name]
 
     race_name = f1_module.get_next_gp_name()
