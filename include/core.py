@@ -601,9 +601,9 @@ async def vitya(ctx:Interaction):
     await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"vitya.png"),silent=True)
 
 @bot.tree.command(name="kozso",description="-")
-async def kozso(ctx):
+async def kozso(ctx:Interaction):
     kozso_lines = ["A delfinek.. a víz alatt.. nagyon jó emberek!","Az éérzéések, a szerelem, az ébredések, a kaják, a vizek, a min-mindent imádok, miindent pozitiven csak!"]
-    await ctx.send(random.choice(kozso_lines))
+    await ctx.response.send_message(random.choice(kozso_lines))
 
 @bot.tree.command(name="lajos",description="-")
 async def lajos(ctx:Interaction, pia:str="palinka"):
