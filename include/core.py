@@ -513,6 +513,8 @@ async def myguess(ctx:discord.Interaction):
 
 @bot.tree.command(name="mypoints",description="Show user's points in total")
 async def mypoints(ctx:discord.Interaction,username:str=""):
+    await ctx.response.send_message("Out of order")
+    return 0
     users_db = {}
     user_name = ""
     if username:
@@ -577,11 +579,12 @@ async def hello(ctx:Interaction):
 @bot.tree.command(name="help",description="-")
 async def embed_test(ctx:Interaction):
     descr = f"First, take your guesses by **/guess**\n\
+and guess for number of DNFs with **/dnf**\n\
 Then wait until the grand prix completes\n\
 Finally evaluate your score by **/eval**\n\
 In the meanwhile,\n\
 you can see your guess by **/myguesses**\n\
-and you can see your point by **/mypoints**\n\
+and you **can not** see your point by **/mypoints**\n\
 And of course invoke many *funny* commands as well\n\
     \nGood luck! 😁🏁\n*the developer*"
     embed=discord.Embed(title="Tutorial",
