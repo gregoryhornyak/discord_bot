@@ -112,7 +112,7 @@ async def notification_agent():
         now = datetime.datetime.now()
 
         # do daily fetch
-        if now.hour == 8 and now.minute == 20:
+        if now.hour == 6 and now.minute == 20:
             f1_module.daily_fetch()
             pass
 
@@ -124,9 +124,11 @@ async def notification_agent():
             if time.month == delta.month and time.day == delta.day and time.hour == delta.hour and time.minute == delta.minute:
                 await channel.send(f"{r_t} starts in 1 day!") # seems oke
             if now.month == time.month and now.day == time.day and now.hour+2 == time.hour and now.minute == time.minute:
-                await channel.send(f"{r_t} starts in 2 hours!") 
+                if r_t == "race":
+                    await channel.send(f"{r_t} starts in 2 hours!") 
             if now.month == time.month and now.day == time.day and now.hour+1 == time.hour and now.minute == time.minute:
-                await channel.send(f"{channel.guild.default_role} {r_t} starts in **1 hour**! Take your guesses!")
+                if r_t == "race":
+                    await channel.send(f"{channel.guild.default_role} {r_t} starts in **1 hour**! Take your guesses!")
             if now.month == time.month and now.day == time.day and now.hour == time.hour and now.minute == time.minute:
                 await channel.send(f"{channel.guild.default_role} Guessing phase is over for {r_t}!")
 
@@ -203,6 +205,7 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
                           select_race=select_race.values[0],
                           select_driver=select_driver.values[0],
                           next_race_id=next_race_id) # dnf=False
+        # check if already guessed this
         await sub_interaction.response.send_message(f"<{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}>",silent=True)
 
     select_driver.callback = driver_callback
@@ -221,7 +224,7 @@ async def dnf(interaction: discord.Interaction, count: int):
     await interaction.response.send_message(f'<{interaction.user.name} guessed {count} number of DNF(s)>')
     logger.info(f"{interaction.user.name}: R_DNF - {count} for {next_race_name.capitalize()}")
 
-@bot.tree.command(name="eval",description="-")
+@bot.tree.command(name="evaluate",description="-")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses
     could only happen after the race"""
@@ -577,7 +580,7 @@ async def embed_test(ctx:Interaction):
     descr = f"First, take your guesses by **/guess**\n\
 and guess for number of DNFs with **/dnf**\n\
 Then wait until the grand prix completes\n\
-Finally evaluate your score by **/eval**\n\
+Finally evaluate your score by **/evaluate**\n\
 In the meanwhile,\n\
 you can see your guess by **/myguesses**\n\
 and you **can not** see your point by **/mypoints**\n\
