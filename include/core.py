@@ -566,7 +566,7 @@ async def info(ctx:Interaction):
         descr += f"{time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{disp_minute} - {r_t}\n"
     location = f1_module.get_next_gp_name()
     embed=discord.Embed(colour=0xFFFFFF,title=f"Race Information\n{location}",description=descr)
-    await ctx.response.send_message(embed=embed)
+    await ctx.response.send_message(embed=embed,ephemeral=True)
 
 @bot.tree.command(name="hello",description="-")
 async def hello(ctx:Interaction):
