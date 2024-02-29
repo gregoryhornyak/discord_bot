@@ -505,7 +505,7 @@ async def myguess(ctx:discord.Interaction,username:str=""):
     os.system(cmd3)
     logger.info("cropped png")
 
-    await ctx.response.send_message(file=discord.File(f"{USER_GUESS_HISTORY_PDF_PATH}_zoomed.png"))
+    await ctx.response.send_message(file=discord.File(f"{USER_GUESS_HISTORY_PDF_PATH}_zoomed.png"),ephemeral=True)
 
 @bot.tree.command(name="mypoints",description="Show user's points in total")
 async def mypoints(ctx:discord.Interaction,username:str=""):
