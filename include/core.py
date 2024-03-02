@@ -217,12 +217,12 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
 
 @bot.tree.command(name="dnf",description="Guess number of DNF")
 async def dnf(interaction: discord.Interaction, count: int):
-    next_race_id = f1_module.next_gp_details['id']
-    next_race_name = f1_module.next_gp_details['name']
+    next_gp_id = f1_module.next_gp_details['id']
+    next_gp_name = f1_module.next_gp_details['name']
     count = abs(count)
-    db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_race_id)
-    await interaction.response.send_message(f'<{interaction.user.name} guessed {count} number of DNF(s)>')
-    logger.info(f"{interaction.user.name}: R_DNF - {count} for {next_race_name.capitalize()}")
+    db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_gp_id)
+    await interaction.response.send_message(f'<{interaction.user.name}: R_DNF: {count}: {next_gp_name.capitalize()}>',ephemeral=True)
+    logger.info(f"<{interaction.user.name}: R_DNF: {count}: {next_gp_name.capitalize()}>")
 
 @bot.tree.command(name="evaluate",description="-")
 async def eval(ctx:discord.Interaction):
