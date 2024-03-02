@@ -558,7 +558,6 @@ async def info(ctx:Interaction):
     # export this dict compr to F1_module as func
     next_event_details = {r_t: datetime.datetime.strptime(time,LONG_DATE_FORMAT) for r_t,time in f1_module.next_gp_details["sessions"].items()}
     descr=""
-    #descr = f"The bot is in **{BOT_STATE}** mode.\n"
     disp_minute = ""
     
     for r_t,time in next_event_details.items():
@@ -567,6 +566,7 @@ async def info(ctx:Interaction):
         else:
             disp_minute = str(time.minute)
         descr += f"{time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{disp_minute} - {r_t}\n"
+    descr+=f"\nLOCAL TIME: {datetime.datetime.now()}\n"
     location = f1_module.get_next_gp_name()
     embed=discord.Embed(colour=0xFFFFFF,title=f"Race Information\n{location}",description=descr)
     await ctx.response.send_message(embed=embed,ephemeral=True)
