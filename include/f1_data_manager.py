@@ -403,6 +403,7 @@ class F1DataFetcher:
             event_soap_finds = event_soap.find_all('div', class_=class_name)
             event_start_date = [name.get('data-start-time') for name in event_soap_finds]
             event_time_offset = [name.get('data-gmt-offset') for name in event_soap_finds]
+            logger.info(f"{class_name_pretty=}|Original time:{event_start_date[0]=} # {event_time_offset[0]=}|")
             converted_start_time = self.datetime_converter(event_start_date[0],event_time_offset[0])
             datetime_obj = datetime.datetime.strftime(converted_start_time,LONG_DATE_FORMAT)
             grand_prix_schedule[str(race_id)][class_name_pretty] = datetime_obj
