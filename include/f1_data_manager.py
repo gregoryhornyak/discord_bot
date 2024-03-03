@@ -225,15 +225,18 @@ class F1DataFetcher:
     def fetch_prev_gp_details(self) -> None:
         """updates local-class id and name"""
         logger.info("Fetching previous grand prix details: id, name")
-        now = datetime.datetime.now()#strftime(datetime.datetime.now,LONG_DATE_FORMAT)
+        """
+        now = datetime.datetime.now()
         gp_dates = [datetime.datetime.strptime(gp_info["date"],LONG_DATE_FORMAT) for gp_info in self.grand_prix_calendar.values() if gp_info["date"] != ""]
+        logger.debug(f"{gp_dates = }")
         if now not in gp_dates:
             logger.debug("Before season")
             self.prev_gp_details["id"] = "---"
             self.prev_gp_details["name"] = "---"
             return 0
+        """
         
-        all_races_soup = self._request_and_get_soap(self.formula_one_urls["all__races_url"])
+        all_races_soup = self._request_and_get_soap(self.formula_one_urls["all_races_url"])
         all_races_names_data = all_races_soup.find_all('a', class_="dark bold ArchiveLink")
         all_races_names = [name.get_text().strip() for name in all_races_names_data]
         all_races_ids_data = all_races_soup.find_all('a', class_='ArchiveLink')
@@ -343,8 +346,11 @@ class F1DataFetcher:
                     self.grand_prix_calendar[str(event_id)] = ""
                 converted_start_time = self.datetime_converter(event_start_date[0],event_time_offset[0])
                 datetime_obj = datetime.datetime.strftime(converted_start_time,LONG_DATE_FORMAT)
-                self.grand_prix_calendar[str(event_id)]["date"] = datetime_obj    
-                  
+                self.grand_prix_calendar[str(event_id)]["date"] = datetime_obj
+                if datetime.datetime.now() > datetime.datetime.strptime(datetime_obj,LONG_DATE_FORMAT):
+                    logger.debug(f"{str(event_id) = } has been.")
+                    self.grand_prix_calendar[str(event_id)]["completed"] = True
+                                      
         with open(f"{YEAR_SCHEDULE_PATH}","w") as f:
             json.dump(self.grand_prix_calendar,f,indent=4)
 

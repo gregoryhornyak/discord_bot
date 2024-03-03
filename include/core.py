@@ -157,6 +157,7 @@ def get_discord_members(ctx:Interaction): # dont change it
     for member in ctx.guild.members:
         if member.name != "lord_maldonado":
             user_info[member.name] = member.id
+    user_info["csokker99"] = 69420
     return user_info
 
 async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
@@ -262,6 +263,7 @@ async def eval(ctx:discord.Interaction):
     guess_db_reversed = guess_db.iloc[::-1]
     
     #* SCORE-TABLE 
+    scoring_board = {}
     try:
         with open(f'{SCORE_TABLE_PATH}', 'r') as f:
             scoring_board = json.load(f)
@@ -269,19 +271,21 @@ async def eval(ctx:discord.Interaction):
         logger.error(e)
         
     #* USERS_DB
+    users_db = {}
     try:
         with open(f'{USERS_DB_PATH}', 'r') as f:
             users_db = json.load(f)
     except FileNotFoundError:
         logger.warning("NO USERS_DB_JSON")
+        users_db = {}
         with open(f'{USERS_DB_PATH}', 'w') as f:
             json.dump(users_db,f,indent=4)
-        users_db = {}
     
 
     # collect users
 
     members = get_discord_members(ctx)
+    logger.debug(f"{members = }")
 
     # --- all resources are collected
 
@@ -296,12 +300,15 @@ async def eval(ctx:discord.Interaction):
     # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
     #
 
-    logger.info(f"{f1_module.prev_gp_details = }")
+    #logger.info(f"{f1_module.prev_gp_details = }")
 
     ## ready for evaluation  
 
     # for every user
     for user_name, user_id in members.items():
+        gp_total_point = 0
+        if str(user_id) in users_db.keys():
+            users_db[str(user_id)]["total_points"] = 0
         user_guesses = guess_db_reversed[guess_db_reversed['user_name'] == user_name]
         user_guesses_unique = user_guesses.drop_duplicates(subset=['category'])
         # for every guess
@@ -312,16 +319,17 @@ async def eval(ctx:discord.Interaction):
                 if guessed_category == category:
                     # for every guess 
                     if guessed_driver_name == driver_name:
+                        
                         if str(category) in scoring_board:                            
                             point = scoring_board[category] # each category's score
                         else:
                             logger.info("EVAL: missing race type")
-                        logger.info(f"{user_name}: {category},{driver_name} - {point} point")
+                        #logger.info(f"{user_name}: {category},{driver_name} - {point} point")
                         #await channel.send(f"{user_name}: {category} - {driver_name} -> {point} point")
 
                         # check if user_guesses_unique["time_stamp"] valid
 
-                        logger.debug(f"{race_name = }")
+                        #logger.debug(f"{race_name = }")
 
                         if str(user_id) not in users_db:
                             users_db[str(user_id)] = {
@@ -343,42 +351,65 @@ async def eval(ctx:discord.Interaction):
                         
                         # but not change for points, to restrict overwriting guesses
                         users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"][category] = point # if not DNF
+                        gp_total_point += point
+        #logger.debug(f"{user_name}: {gp_total_point} points")
+        if str(user_id) in users_db.keys():
+            users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = gp_total_point
+            users_db[str(user_id)]["total_points"] += gp_total_point
+        
                         
     await ctx.followup.send("Finished evaluating")
 
     logger.info("Evaluation completed")
-
-    # sum up the points
-    leader_board = {}
-    """
-    for user_id,user_info in users_db.items():
-        local_score = 0
-        if "grand_prix" in user_info.keys():
-            user_info["grand_prix"]
-        for  in user_info.items():
-            for key, race_details in race_list.items():
-                if key == "score_board":
-                    for point in race_details.values():
-                        local_score += int(point)
-        leader_board[the_rest["user_name"]] = local_score
-    """
+    
     with open(f'{USERS_DB_PATH}', 'w') as f:
         json.dump(users_db,f,indent=4)
 
-    logger.info("Saved users_db")
+    # sum up the points
+    leader_board = {}
+    
+    for user_id,user_info in users_db.items():
+        leader_board[user_info["user_name"]] = user_info["total_points"]
 
     leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
 
     logger.debug(f"{leader_board = }")
+    
+    sorted_scores = sorted(list(set(leader_board.values())), reverse=True)
+    
+    logger.debug(f"{sorted_scores = }")
+
+    """
+    {
+    "korgabor": 11,
+    "tth.csenge": 11,
+    "csokker99": 11,
+    "folkloresoft": 10,
+    "rossztosz": 9,
+    "venice71": 9,
+    "martinfaber": 9,
+    "mvince4": 9,
+    "otvosbernadett": 6,
+    "ghornyak": 5
+    }
+    """
 
     descr = ""
-    for index, (name, score) in enumerate(leader_board.items()):
-        descr += f"{index}. {name} - {score} pts\n"
+    enumarator = 0
+    for score in sorted_scores:
+        descr += f"{score} pts: "
+        for name, player_score in leader_board.items():
+            if score == player_score:
+                descr += f"{name} "
+        descr += "\n"
+                
+    logger.debug(f"{descr = }")
 
     embed=discord.Embed(colour=0xFFFFFF,title="LEADERBOARD",description=descr)
     #await ctx.response.send_message()
 
     await ctx.followup.send(embed=embed)
+    #await ctx.followup.send("Just a second...")
 
     leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
     profiles = [str(PROFILE_PICS_PATH+member_name+".png") for member_name in leader_board.keys()]
