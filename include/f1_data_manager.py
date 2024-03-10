@@ -98,7 +98,7 @@ class F1DataFetcher:
         "sprint-shootout":      "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/sprint-shootout.html",
         "qualifying":           "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/qualifying.html",
         "race":                 "https://www.formula1.com/en/results.html/2024/races/prev_race_id/prev_race_name/race-result.html",
-        "driver-of-the-day":    "https://www.formula1.com/en/latest/article.driver-of-the-day-2024.5wGE2ke3SFqQwabYVQXLnF.html",
+        "driver-of-the-day":    "https://www.formula1.com/en/latest/article.driver-of-the-day-2024.1I7A0iPl3nMaXyPIeFVFLZ.html",
         "fastest-lap-on-race":  "https://www.formula1.com/en/results.html/2024/fastest-laps.html",
         "driver_details_url":   "https://www.formula1.com/en/drivers.html"
     }
