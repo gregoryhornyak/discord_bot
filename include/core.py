@@ -112,7 +112,7 @@ async def notification_agent():
         now = datetime.datetime.now()
 
         # do daily fetch
-        if now.hour == 6 and now.minute == 20:
+        if now.hour == 4 and now.minute == 20:
             f1_module.daily_fetch()
             pass
 
@@ -169,7 +169,7 @@ async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
                 await member.default_avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
 
 @bot.tree.command(name="guess",description="Make a guess for a category and a driver")
-async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a slash command is a good option?
+async def guess(ctx:discord.Interaction): #include DNF
     """Allows the user to make a guess"""
     await ctx.response.defer(ephemeral=True)
 
@@ -185,36 +185,75 @@ async def guess(ctx:discord.Interaction): # Q: making the dropdown box into a sl
     select_driver = discord.ui.Select(placeholder="Choose a driver",
                                     options=[discord.SelectOption(
                                         label=driver,description=team) for driver,team in drivers_info.items()])
+    select_dnf = discord.ui.Select(placeholder="Choose number of DNF",
+                                   options=[discord.SelectOption(label=str(number)) for number in range(0,21)])
+    
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
+    press_dnf_button = discord.ui.Button(label="SUBMIT DNF",style=discord.ButtonStyle.secondary)
     theView = discord.ui.View()
     theView.add_item(select_race)
     theView.add_item(select_driver)
+    theView.add_item(select_dnf)
     theView.add_item(press_button)
+    theView.add_item(press_dnf_button)
     
     async def driver_callback(sub_interaction:Interaction):
         await sub_interaction.response.defer()
 
     async def race_callback(sub_interaction:Interaction):
         await sub_interaction.response.defer()
+        
+    async def dnf_callback(sub_interaction:Interaction):
+        await sub_interaction.response.defer()
+
+    async def dnf_button_callback(sub_interaction:Interaction):
+        name = sub_interaction.user.name
+        id = sub_interaction.user.id
+        logger.debug(f"{select_dnf.values = }")
+        try:
+            logger.info(f"{name}: {select_dnf.values[0]}: {next_race_name.capitalize()}")
+        except (IndexError, NameError, AttributeError) as e:
+            logger.error("No DNF selected")
+        else:
+            next_gp_id = f1_module.next_gp_details['id']
+            next_gp_name = f1_module.next_gp_details['name']
+            count = select_dnf.values[0]
+            db_man.save_guess(name=name,id=id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_gp_id)
+            await sub_interaction.response.send_message(f"<{name}: R_DNF: {select_dnf.values[0]}: {next_race_name.capitalize()}>",silent=True)
 
     async def button_callback(sub_interaction:Interaction):
         name = sub_interaction.user.name
         id = sub_interaction.user.id
-        logger.info(f"{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}")
+        logger.debug(f"{select_race.values = }")
+        try:
+            logger.info(f"{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}")
+        except (IndexError, NameError, AttributeError) as e:
+            logger.error("No driver or/and category selected")
+        else:
+            await sub_interaction.response.send_message(f"<{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}>",silent=True)
+        
+        
+        #logger.info(f"{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}")
         db_man.save_guess(name=name,
                           id=id,
                           select_race=select_race.values[0],
                           select_driver=select_driver.values[0],
                           next_race_id=next_race_id) # dnf=False
         # check if already guessed this
-        await sub_interaction.response.send_message(f"<{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}>",silent=True)
+        #await sub_interaction.response.send_message(f"Nothing happened",silent=True)
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
+    select_dnf.callback = dnf_callback
     press_button.callback = button_callback
+    press_dnf_button.callback = dnf_button_callback
 
-    message = f"Guess for {next_race_name} {datetime.datetime.now().year}\n*For Race DNF, call '/dnf'*\n**(use this form for multiple guesses)**"
+    message = f"Guess for {next_race_name} {datetime.datetime.now().year}\n**(use this form for multiple guesses)**"
     await ctx.followup.send(content=message, view=theView)
+    #await ctx.edit_original_response()
+
+#! DEPRECATED -> integrated into /guess
+"""
 
 @bot.tree.command(name="dnf",description="Guess number of DNF")
 async def dnf(interaction: discord.Interaction, count: int):
@@ -224,6 +263,7 @@ async def dnf(interaction: discord.Interaction, count: int):
     db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_gp_id)
     await interaction.response.send_message(f'<{interaction.user.name}: R_DNF: {count}: {next_gp_name.capitalize()}>',ephemeral=True)
     logger.info(f"<{interaction.user.name}: R_DNF: {count}: {next_gp_name.capitalize()}>")
+"""
 
 @bot.tree.command(name="evaluate",description="-")
 async def eval(ctx:discord.Interaction):
@@ -311,47 +351,57 @@ async def eval(ctx:discord.Interaction):
             users_db[str(user_id)]["total_points"] = 0
         user_guesses = guess_db_reversed[guess_db_reversed['user_name'] == user_name]
         user_guesses_unique = user_guesses.drop_duplicates(subset=['category'])
+        # if member havent guessed, no gp_id
+        try:
+            guess_for_gp_id = user_guesses_unique["gp_id"].iloc[0]
+        except IndexError as e:
+            logger.error(f"{user_name} hasnt guessed.")
+            break
+            
         # for every guess
         for (guessed_category, guessed_driver_name) in (zip(user_guesses_unique['category'], user_guesses_unique['driver_name'])):
-            # for every category's row
+            # for every category's result
             for category,driver_name in results.items():
-                # for every race type
+                # for every category
                 if guessed_category == category:
                     # for every guess 
                     if guessed_driver_name == driver_name:
-                        
-                        if str(category) in scoring_board:                            
-                            point = scoring_board[category] # each category's score
-                        else:
-                            logger.info("EVAL: missing race type")
-                        #logger.info(f"{user_name}: {category},{driver_name} - {point} point")
-                        #await channel.send(f"{user_name}: {category} - {driver_name} -> {point} point")
+                        # if guess for current gp
+                        if str(gp_id) == guess_for_gp_id:
+                            
+                            if str(category) in scoring_board:                            
+                                point = scoring_board[category] # each category's score
+                            else:
+                                logger.info("EVAL: missing race type")
+                            #logger.info(f"{user_name}: {category},{driver_name} - {point} point")
+                            #await channel.send(f"{user_name}: {category} - {driver_name} -> {point} point")
 
-                        # check if user_guesses_unique["time_stamp"] valid
+                            # check if user_guesses_unique["time_stamp"] valid
 
-                        #logger.debug(f"{race_name = }")
+                            #logger.debug(f"{race_name = }")
 
-                        if str(user_id) not in users_db:
-                            users_db[str(user_id)] = {
-                                "user_name": user_name,
-                                "grand_prix": {},
-                                "total_points": 0
-                                }
-                        if str(gp_id) not in users_db[str(user_id)]["grand_prix"]:
-                            users_db[str(user_id)]["grand_prix"][str(gp_id)] = {}
-                        
-                        if "date" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["date"] = ""
-                        if "name" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["name"] = race_name
-                        if "results" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"] = {}
-                        if "gp_total_points" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = 0
-                        
-                        # but not change for points, to restrict overwriting guesses
-                        users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"][category] = point # if not DNF
-                        gp_total_point += point
+                            if str(user_id) not in users_db:
+                                users_db[str(user_id)] = {
+                                    "user_name": user_name,
+                                    "grand_prix": {},
+                                    "total_points": 0
+                                    }
+                            if str(gp_id) not in users_db[str(user_id)]["grand_prix"]:
+                                users_db[str(user_id)]["grand_prix"][str(gp_id)] = {}
+                            
+                            if "date" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["date"] = ""
+                            if "name" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["name"] = race_name
+                            if "results" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"] = {}
+                            if "gp_total_points" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
+                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = 0
+                            
+                            # but not change for points, to restrict overwriting guesses
+                            
+                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"][category] = point # if not DNF
+                            gp_total_point += point
         #logger.debug(f"{user_name}: {gp_total_point} points")
         if str(user_id) in users_db.keys():
             users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = gp_total_point
@@ -362,8 +412,16 @@ async def eval(ctx:discord.Interaction):
 
     logger.info("Evaluation completed")
     
-    with open(f'{USERS_DB_PATH}', 'w') as f:
-        json.dump(users_db,f,indent=4)
+    #* Calculate overall points:
+    for user_id,user_details in users_db.items():
+        total_points = 0
+        for gp_details in user_details["grand_prix"].values():
+            total_points += int(gp_details["gp_total_points"])
+        users_db[user_id]["total_points"] = total_points
+    
+    if users_db:
+        with open(f'{USERS_DB_PATH}', 'w') as f:
+            json.dump(users_db,f,indent=4)
 
     # sum up the points
     leader_board = {}
@@ -460,12 +518,24 @@ def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
     draw.text(position, text, fill=text_color, font=font)
     image.save('resources/uploads/winners.png')
 
+@bot.tree.command(name="force_fetch",description="ADMIN - Fetch latest info right now")
+async def force_fetch(interaction:Interaction,password:str):    
+    with open(f"{PASSW_PATH}",'r') as f:
+        found_pw = f.read().strip()
+        logger.info(f"{password}!={found_pw} is {password!=found_pw}")
+        if password!=found_pw:
+            await interaction.response.send_message("Wrong password")
+            return 0
+    f1_module.daily_fetch(forced=True)
+    logger.info("F1 modules fetched up-to-date info")
+    await interaction.response.send_message("Force fetching completed",ephemeral=True)
 
+"""
 @bot.tree.command(name="bonus",description="-")
 async def bonus(ctx:Interaction):
     await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"winners.png"))
     logger.info("Team photo requested")
-
+"""
 #--------< Additional Functions >----#
 
 @bot.tree.command(name="rules",description="-")

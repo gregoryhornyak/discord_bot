@@ -133,10 +133,12 @@ class F1DataFetcher:
         logger.info("F1DataFetcher initialised")
         self.daily_fetch()
 
-    def daily_fetch(self):
+    def daily_fetch(self,forced=False):
         """once every day fetch the data"""
         logger.info("Checking daily fetch need")
         start_fetch = self._check_fetch_log() #! MUST
+        if forced:
+            start_fetch = True
         logger.info(f"Daily fetch starting: {start_fetch}")
         if start_fetch:
             # identify season, also if pre-season
