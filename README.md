@@ -58,4 +58,4 @@
 
 J. Gergely Hornyak as **developer**
 
-Gabor Korecz with **technical support** and **testing**
+Gabor Korecz as **revisor**
