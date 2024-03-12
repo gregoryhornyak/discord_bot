@@ -21,6 +21,7 @@ def save_guess(name,id,select_race,select_driver,next_race_id,dnf=False):
         "gp_id": _next_race_id,
         "category": _select_race,
         "driver_name": str(_select_driver)
+        }
 
     try:
         with open(f"{GUESS_DB_PATH}", "r") as f:
