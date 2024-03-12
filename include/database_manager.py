@@ -15,22 +15,12 @@ def save_guess(name,id,select_race,select_driver,next_race_id,dnf=False):
     def populate_json(_name=name,_id=id,_select_race=select_race,_select_driver=select_driver,_next_race_id=next_race_id,_dnf=dnf):
         logger.warning("Guess GP ID is hard-coded (1226)") if BOT_STATE == "TEST" else logger.info("populate guess json")
         _next_race_id = _next_race_id if BOT_STATE != "TEST" else "1226"
-        if _dnf:
-            return {
-            "user_name": _name,
-            "user_id": str(_id),
-            "gp_id": _next_race_id,
-            "category": _select_race,
-            "driver_name": str(_select_driver)
-        }
-        else:
-            return {
-            "user_name": _name,
-            "user_id": str(_id),
-            "gp_id": _next_race_id,
-            "category": _select_race,
-            "driver_name": _select_driver
-        }
+        return {
+        "user_name": _name,
+        "user_id": str(_id),
+        "gp_id": _next_race_id,
+        "category": _select_race,
+        "driver_name": str(_select_driver)
 
     try:
         with open(f"{GUESS_DB_PATH}", "r") as f:
