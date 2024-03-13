@@ -575,7 +575,7 @@ async def getlogs(ctx:discord.Interaction, num_of_lines:int=500):
         for line in lines:
             file.write(line)
     logger.info(f"botlogs_extract.md populated")
-    cmd = f'pandoc --pdf-engine=xelatex --variable "monofont:docs/FreeMono.otf" {BOT_LOGS_EXT_MD_PATH} -o {BOT_LOGS_EXT_PDF_PATH}'
+    cmd = f'pandoc {BOT_LOGS_EXT_MD_PATH} -o {BOT_LOGS_EXT_PDF_PATH}'
     os.system(cmd)    
     logger.info(f'sending {BOT_LOGS_EXT_PDF_PATH+"_"+str(num_of_lines)+".pdf"}')
     await ctx.response.send_message(file=discord.File(BOT_LOGS_EXT_PDF_PATH),delete_after=6)
