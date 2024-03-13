@@ -631,6 +631,7 @@ async def myguess(ctx:discord.Interaction,username:str=""):
 
 @bot.tree.command(name="generate_report",description="Complete report on results")
 async def generate_report(ctx:discord.Interaction):
+#async def generate_report(ctx:discord.Interaction,gp:typing.Literal["Bahrain","Saudi Arabia"]="Saudi Arabia",uname:typing.Literal["user01","user02","user03"]="current_user"):
     """name | guess | result | point"""
     # previous GP ID
     prev_gp_id = f1_module.get_prev_gp_id()
