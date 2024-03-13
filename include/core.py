@@ -423,14 +423,18 @@ async def eval(ctx:discord.Interaction):
     for user_name,user_id in participants.items():
         selected_guesses = name_guess_result_point_df[name_guess_result_point_df['user_name'] == user_name]
         points_sum = f1_data.pd.to_numeric(selected_guesses['point'].sum())
-        descr += f"{user_name}: {points_sum} pts "
+        descr += f"{user_name}: {points_sum} pts"
         #podium
-        logger.debug(f"len({username}.podium)={selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0]}")
-        if selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0] == 3: # all podium guesses exist
-            selected_podium_guesses = selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])]
-            if (selected_podium_guesses['point']!=0).all(): # none of them is zero
-                descr += "+ podium (1pt)"
-        descr += "\n"
+        try:
+            logger.debug(f"len({username}.podium)={selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0]}")
+            if selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0] == 3: # all podium guesses exist
+                selected_podium_guesses = selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])]
+                if (selected_podium_guesses['point']!=0).all(): # none of them is zero
+                    descr += " + podium (1pt)"
+        except Exception as e:
+            logger.error(e)
+        finally:
+            descr += "\n"
     embed=discord.Embed(colour=0xFFFFFF,title=f"{prev_gp_name} leaderboard",description=descr)
     await ctx.followup.send(embed=embed)
     
