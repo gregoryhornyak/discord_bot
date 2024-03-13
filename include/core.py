@@ -565,7 +565,7 @@ Rules for guessing:
 """
     await interaction.response.send_message(rule_book)
 
-@bot.tree.command(name="getlogs",description="ADMIN - show logs ")
+@bot.tree.command(name="get_logs",description="ADMIN - show logs ")
 async def getlogs(ctx:discord.Interaction, num_of_lines:int=500):
     """ send logs as pdf to report"""
     logger.info(f"getlogs with {num_of_lines} lines")
@@ -586,7 +586,7 @@ async def getlogs(ctx:discord.Interaction, num_of_lines:int=500):
 
     # only send back last N number of lines to reduce file size
 
-@bot.tree.command(name="myguesses",description="Show user's guesses for next grand prix")
+@bot.tree.command(name="my_guesses",description="Show user's guesses for next grand prix")
 async def myguess(ctx:discord.Interaction,username:str=""):
     with open(f"{GUESS_DB_PATH}", "r") as f:
             guesses_database = json.load(f)
@@ -708,7 +708,7 @@ async def dadjoke(ctx:Interaction):
     joke_json = json.loads(output)
     await ctx.response.send_message(f'Dad joke of the day:\n{joke_json["joke"]}',ephemeral=True)
 
-@bot.tree.command(name="whoami",description="-")
+@bot.tree.command(name="who_am_i",description="-")
 async def whoami(ctx:Interaction):
     await ctx.response.send_message(f"You are {ctx.user.name},\nHey <@{ctx.user.id}>",ephemeral=True)
 
