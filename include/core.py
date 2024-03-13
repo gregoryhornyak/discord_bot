@@ -229,63 +229,6 @@ async def eval(ctx:discord.Interaction):
     await ctx.response.defer()
 
     """
-
-    # f1 data
-
-    gp_id = f1_module.get_prev_gp_id()
-    race_name = f1_module.get_prev_gp_name()
-
-    if gp_id == "---":
-        await ctx.followup.send("Before season - no results yet.")
-        return 0
-
-    # results - official results
-    # existence assured by f1_module
-    results = f1_module.get_all_results()
-
-    #* read in all data
-    #*  GUESS_DB
-    try:
-        with open(f"{GUESS_DB_PATH}", "r") as f:
-            guess_db = json.load(f)
-    except FileNotFoundError:
-        logger.info("Missing guess_db.json")
-        ctx.channel.send("There are no guesses yet")
-        return 0
-
-    # does it need to be transformed into a dataframe?
-    guess_db = f1_data.pd.DataFrame.from_dict(guess_db, orient='index')
-    guess_db.reset_index(inplace=True)
-    guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
-    guess_db_reversed = guess_db.iloc[::-1]
-    
-    #* SCORE-TABLE 
-    scoring_board = {}
-    try:
-        with open(f'{SCORE_TABLE_PATH}', 'r') as f:
-            scoring_board = json.load(f)
-    except Exception as e:
-        logger.error(e)
-        
-    #* USERS_DB
-    users_db = {}
-    try:
-        with open(f'{USERS_DB_PATH}', 'r') as f:
-            users_db = json.load(f)
-    except FileNotFoundError:
-        logger.warning("NO USERS_DB_JSON")
-        users_db = {}
-        with open(f'{USERS_DB_PATH}', 'w') as f:
-            json.dump(users_db,f,indent=4)
-    
-
-    # collect users
-
-    members = get_discord_members(ctx)
-    logger.debug(f"{members = }")
-
-    # --- all resources are collected
-
     # EVALUATING
 
     # 1. find all the users who guessed (if didnt, out of game)
@@ -303,18 +246,6 @@ async def eval(ctx:discord.Interaction):
 
     # for every user
     for user_name, user_id in members.items():
-        gp_total_point = 0
-        if str(user_id) in users_db.keys():
-            users_db[str(user_id)]["total_points"] = 0
-        user_guesses = guess_db_reversed[guess_db_reversed['user_name'] == user_name]
-        user_guesses_unique = user_guesses.drop_duplicates(subset=['category'])
-        # if member havent guessed, no gp_id
-        try:
-            guess_for_gp_id = user_guesses_unique["gp_id"].iloc[0]
-        except IndexError as e:
-            logger.error(f"{user_name} hasnt guessed.")
-            break
-            
         # for every guess
         for (guessed_category, guessed_driver_name) in (zip(user_guesses_unique['category'], user_guesses_unique['driver_name'])):
             # for every category's result
@@ -359,11 +290,6 @@ async def eval(ctx:discord.Interaction):
                             
                             users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"][category] = point # if not DNF
                             gp_total_point += point
-        #logger.debug(f"{user_name}: {gp_total_point} points")
-        if str(user_id) in users_db.keys():
-            users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = gp_total_point
-            users_db[str(user_id)]["total_points"] += gp_total_point
-       
     """ 
     
     # previous GP ID
@@ -382,7 +308,7 @@ async def eval(ctx:discord.Interaction):
     score_board_df.rename(columns={'index': 'category'}, inplace=True)
     score_board_df.rename(columns={0: 'point'}, inplace=True)
         
-    # users info database
+    # guess database
     guess_database = {}
     with open(f"{GUESS_DB_PATH}", "r") as f:
         guess_database = json.load(f)
@@ -390,7 +316,6 @@ async def eval(ctx:discord.Interaction):
     guess_db.reset_index(inplace=True)
     guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
     guess_db_df = guess_db.iloc[::-1]
-    #logger.debug(f"{guess_db_df = }")
     
     # list of member's name
     participants = get_discord_members(ctx)
@@ -402,21 +327,25 @@ async def eval(ctx:discord.Interaction):
     results_df.rename(columns={'index': 'category'}, inplace=True)
     results_df.rename(columns={0: 'result'}, inplace=True)
     
-    
     name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on='category', how='left')
     name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
     name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on='category', how='left')
-    
+
+    # database with users, their guess, the results, the score - for all Grand Prix. 
     name_guess_result_point_df.loc[name_guess_result_point_df['driver_name'] != name_guess_result_point_df['result'], 'point'] = 0  
     
     name_guess_result_point_df = name_guess_result_point_df.sort_values(by='user_name')
-    
+    # filter for current grand prix
     name_guess_result_point_df = name_guess_result_point_df[name_guess_result_point_df['gp_id'] == prev_gp_id]
     name_guess_result_point_df.reset_index(inplace=True)
     name_guess_result_point_df = name_guess_result_point_df.drop(columns=['index'])
     name_guess_result_point_df.rename(columns={'driver_name': 'guess'}, inplace=True)
-    
+
+    #todo groupby(users) and also groupby(gp_id) to preserve all categories for all grand prix
     name_guess_result_point_df = name_guess_result_point_df.groupby('user_name').apply(lambda x: x.drop_duplicates('category')).reset_index(drop=True)
+    
+    logger.info("Evaluation completed")
+    await ctx.followup.send("Finished evaluating")
     
     descr = ""
     
@@ -439,18 +368,15 @@ async def eval(ctx:discord.Interaction):
     await ctx.followup.send(embed=embed)
     
     return 0
-                        
-    await ctx.followup.send("Finished evaluating")
-
-    logger.info("Evaluation completed")
-    
     #* Calculate overall points:
+    # df.groupby(['user_name','category']).sum()
+    """
     for user_id,user_details in users_db.items():
         total_points = 0
         for gp_details in user_details["grand_prix"].values():
             total_points += int(gp_details["gp_total_points"])
         users_db[user_id]["total_points"] = total_points
-    
+    """
     if users_db:
         with open(f'{USERS_DB_PATH}', 'w') as f:
             json.dump(users_db,f,indent=4)
@@ -480,61 +406,6 @@ async def eval(ctx:discord.Interaction):
                 
     logger.debug(f"{descr = }")
 
-    embed=discord.Embed(colour=0xFFFFFF,title="LEADERBOARD",description=descr)
-    #await ctx.response.send_message()
-
-    await ctx.followup.send(embed=embed)
-    #await ctx.followup.send("Just a second...")
-
-    leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
-    profiles = [str(PROFILE_PICS_PATH+member_name+".png") for member_name in leader_board.keys()]
-    await save_discord_members_pics(ctx)
-    winner_name = "NOONE"
-    if profiles:
-        winner_name = profiles[0].split('/')[-1].split('.')[0]
-    logger.info(f"{winner_name = }")
-    #if len(profiles) > 1:
-     #   create_podium(profiles[0],profiles[1],profiles[2],race_name.capitalize(),str(datetime.datetime.now().year),winner_name)
-    #await ctx.channel.send("Finished leaderboard")
-    #await ctx.channel.send(file=discord.File("resources/uploads/winners.png"))
-    
-def create_podium(place_1,place_2,place_3,race_name,year,winner_name):
-
-    place1 = Image.open(place_1)
-    place2 = Image.open(place_2)
-    place3 = Image.open(place_3)
-    new_size1 = (300, 300)
-    new_size2 = (230, 230)
-    new_size3 = (180, 180)
-    image1 = place1.resize(new_size1)
-    image2 = place2.resize(new_size2)
-    image3 = place3.resize(new_size3)
-    background_image = Image.open('resources/uploads/winners_stand.png')
-    background_image = background_image.convert('RGB')
-    combined_image = Image.new('RGB', background_image.size)
-    combined_image.paste(background_image, (0, 0))
-    # 1256x702
-    coord_image1 = (670-int(new_size1[0]/2),135)  # Coordinates for image1
-    coord_image2 = (260-int(new_size2[0]/2), 220)  # Coordinates for image2
-    coord_image3 = (1055-int(new_size2[0]/2), 288)  # Coordinates for image3
-    combined_image.paste(image1, coord_image1)
-    combined_image.paste(image2, coord_image2)
-    combined_image.paste(image3, coord_image3)
-
-    grat = random.choice(GRATULATION_PHRASES)
-
-    text = f"{grat} {winner_name}!   ({race_name}, {year})"
-    #font = ImageFont.truetype("arial.ttf", size=36)
-    position = (300, 634)
-    text_color = (0, 0, 0)
-    combined_image.save('resources/uploads/winners.png')
-    image = Image.open('resources/uploads/winners.png')
-    draw = ImageDraw.Draw(image)
-    font_size = 40
-    font = ImageFont.truetype("resources/uploads/Autography.otf", font_size)
-    draw.text(position, text, fill=text_color, font=font)
-    image.save('resources/uploads/winners.png')
-
 @bot.tree.command(name="force_fetch",description="ADMIN - Fetch latest info right now")
 async def force_fetch(interaction:Interaction,password:str):    
     with open(f"{PASSW_PATH}",'r') as f:
@@ -547,12 +418,6 @@ async def force_fetch(interaction:Interaction,password:str):
     logger.info("F1 modules fetched up-to-date info")
     await interaction.response.send_message("Force fetching completed",ephemeral=True)
 
-"""
-@bot.tree.command(name="bonus",description="-")
-async def bonus(ctx:Interaction):
-    await ctx.response.send_message(file=discord.File(UPLOADS_PATH+"winners.png"))
-    logger.info("Team photo requested")
-"""
 #--------< Additional Functions >----#
 
 @bot.tree.command(name="rules",description="-")
@@ -560,8 +425,8 @@ async def rules(interaction:Interaction):
     rule_book = """
 Rules for guessing:
 1. find all the users who guessed (if didnt, out of game).
-2. if more guesses under same category then latest matters.
-3. if didnt guess in a category then doesn't get points.
+2. if more guesses under same category, then latest matters.
+3. if didnt guess in a category, then doesn't get points.
 """
     await interaction.response.send_message(rule_book)
 
@@ -737,12 +602,11 @@ async def hello(ctx:Interaction):
 @bot.tree.command(name="help",description="-")
 async def embed_test(ctx:Interaction):
     descr = f"First, take your guesses by **/guess**\n\
-and guess for number of DNFs with **/dnf**\n\
 Then wait until the grand prix completes\n\
 Finally evaluate your score by **/evaluate**\n\
 In the meanwhile,\n\
-you can see your guess by **/myguesses**\n\
-and you **can not** see your point by **/mypoints**\n\
+you can see your guess by **/my_guesses**\n\
+or you can request a report with **/generate_report**\n\
 And of course invoke many *funny* commands as well\n\
     \nGood luck! 😁🏁\n*the developer*"
     embed=discord.Embed(title="Tutorial",
@@ -789,15 +653,14 @@ async def lajos(ctx:Interaction, pia:str="palinka"):
         for line in script.split('\n'):
             await channel.send(line,ephemeral=True)
     elif pia == "vodka":
-        await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál te buzi? ||",ephemeral=True)
+        await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál, te buzi? ||",ephemeral=True)
     await ctx.followup.send("---",ephemeral=True)
 
 ### UNSTABLE
-
+"""
 @bot.tree.command(name="gyere",description="-")
 async def join(ctx:Interaction):
     await ctx.response.defer()
-    """Joins a voice channel"""
     if ctx.guild.voice_client is not None:
         return await ctx.guild.voice_client.move_to("General")
     channel = [chnl for chnl in ctx.guild.voice_channels][0]
@@ -805,7 +668,6 @@ async def join(ctx:Interaction):
 
 @bot.tree.command(name="halljuk",description="-")
 async def play(ctx:Interaction, person:typing.Literal["lajos","hosszulajos","vitya","max","feri","hektor","kozso","furaferi"]):
-    """Plays a file from the local filesystem"""
     await ctx.response.defer()
     song_list = {
         "lajos": f"{UPLOADS_PATH}szia_lajos.mp3",
@@ -824,14 +686,7 @@ async def play(ctx:Interaction, person:typing.Literal["lajos","hosszulajos","vit
 
 @bot.tree.command(name="naszia",description="-")
 async def stop(ctx:Interaction):
-    """Stops and disconnects the bot from voice"""
     await ctx.guild.voice_client.disconnect()
     #await ctx.followup.send("---",ephemeral=True)
+"""
 
-
-
-#----< Main Function Init >----#
-
-if __name__ == "__main__":
-    logger.warning("LOCAL FUNCTION RUNNING")
-    pass
