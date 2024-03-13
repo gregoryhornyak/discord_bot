@@ -1,35 +1,25 @@
 #----< Imports >----#
 
+import datetime
+import os
+import typing
+import asyncio
+import subprocess
+import calendar
+from PIL import Image, ImageFont, ImageDraw
+import random
+
 import discord
 from discord.ext import commands
 
-import datetime
-import os
-
-import typing
-
 from discord.interactions import Interaction
+from dateutil.parser import parse
 
-from include.logging_manager import logger
-from include.constants import *
 import include.f1_data_manager as f1_data
 import include.database_manager as db_man
 
-import asyncio
-from dateutil.parser import parse
-import subprocess
-
-from PIL import Image, ImageFont, ImageDraw
-import random
-import calendar
-
-"""
-todo:
-
-- the bot should run automates tests every first bootup of the day:
-  - check databases, requests, connection, modules, dependencies
-
-"""
+from include.logging_manager import logger
+from include.constants import *
 
 #----< Bot init >----#
 
@@ -66,7 +56,7 @@ async def on_ready():
     await notification_agent()
     #await guess_agent()
 
-
+"""
 @bot.event
 async def on_message(ctx:Interaction):
     if ctx.author.name != "lord_maldonado":
@@ -74,35 +64,8 @@ async def on_message(ctx:Interaction):
         did_swear = [item for item in SWEAR_WORDS if item in ctx.content.lower()]
         if did_swear:
             await ctx.channel.send(random.choice(BLACK_LISTED_PHRASES))
+"""
 
-
-@bot.tree.command(name="status",description="get bot's current state")
-async def bot_state(ctx:Interaction):
-    next_event_details = f1_module.next_grand_prix_events
-    now = datetime.datetime.strftime(datetime.datetime.now,LONG_DATE_FORMAT)
-
-    descr = f"The bot is in **{BOT_STATE}** mode.\n"
-    now = datetime.datetime.now()
-    prev_race_details = f1_module.prev_gp_details
-    descr += f"⏪ {prev_race_details['name']}({prev_race_details['id']})\n"
-    next_race_details = f1_module.next_gp_details
-    descr += f"❎ Guessing for \n{next_race_details['name']}({next_race_details['id']})\n"
-    descr += f"⏩ {next_race_details['name']}({next_race_details['id']})\n"
-
-    bot_current_state = {}
-    with open(STATE_FILE_PATH,"r") as f:
-        bot_current_state = json.load(f)
-
-    for raceid in ["raceID_1","raceID_2","raceID_3"]:
-        racetime = bot_current_state[raceid]["date"]
-        if datetime.datetime.strptime(racetime,LONG_DATE_FORMAT) <= now:
-            bot_current_state[raceid]["when"] = "past"
-        else:
-            bot_current_state[raceid]["when"] = "future"
-
-    embed=discord.Embed(colour=0xFFFFFF,title="Bot state info",description=descr)
-    await ctx.response.send_message(embed=embed)
-    
 async def notification_agent():
     with open(f"{SERVER_CHANNEL_ID_PATH}","r") as f:
         discord_data = json.load(f)
@@ -123,13 +86,16 @@ async def notification_agent():
             # 2024-02-29 11:30:00.000000
             if time.month == delta.month and time.day == delta.day and time.hour == delta.hour and time.minute == delta.minute:
                 await channel.send(f"{r_t} starts in 1 day!") # seems oke
-            if now.month == time.month and now.day == time.day and now.hour+2 == time.hour and now.minute == time.minute:
+            # for 2,1 hours and over, time has been shifted 1 hour earlier due to time issues
+            if now.month == time.month and now.day == time.day and now.hour+2 == time.hour-1 and now.minute == time.minute:
                 if r_t == "race":
                     await channel.send(f"{r_t} starts in 2 hours!") 
-            if now.month == time.month and now.day == time.day and now.hour+1 == time.hour and now.minute == time.minute:
+                    
+            if now.month == time.month and now.day == time.day and now.hour+1 == time.hour-1 and now.minute == time.minute:
                 if r_t == "race":
                     await channel.send(f"{channel.guild.default_role} {r_t} starts in **1 hour**! Take your guesses!")
-            if now.month == time.month and now.day == time.day and now.hour == time.hour and now.minute == time.minute:
+                    
+            if now.month == time.month and now.day == time.day and now.hour == time.hour-1 and now.minute == time.minute:
                 await channel.send(f"{channel.guild.default_role} Guessing phase is over for {r_t}!")
 
         loop_counter += 1
@@ -153,10 +119,12 @@ async def upgrade(interaction:Interaction,password:str):
     await bot.close()
 
 def get_discord_members(ctx:Interaction): # dont change it
+    """user_name: user_id"""
     user_info = {}
     for member in ctx.guild.members:
         if member.name != "lord_maldonado":
             user_info[member.name] = member.id
+    # if csokker not in db
     user_info["csokker99"] = 69420
     return user_info
 
@@ -216,7 +184,7 @@ async def guess(ctx:discord.Interaction): #include DNF
             logger.error("No DNF selected")
         else:
             next_gp_id = f1_module.next_gp_details['id']
-            next_gp_name = f1_module.next_gp_details['name']
+            #next_gp_name = f1_module.next_gp_details['name']
             count = select_dnf.values[0]
             db_man.save_guess(name=name,id=id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_gp_id)
             await sub_interaction.response.send_message(f"<{name}: R_DNF: {select_dnf.values[0]}: {next_race_name.capitalize()}>",silent=True)
@@ -252,19 +220,6 @@ async def guess(ctx:discord.Interaction): #include DNF
     await ctx.followup.send(content=message, view=theView)
     #await ctx.edit_original_response()
 
-#! DEPRECATED -> integrated into /guess
-"""
-
-@bot.tree.command(name="dnf",description="Guess number of DNF")
-async def dnf(interaction: discord.Interaction, count: int):
-    next_gp_id = f1_module.next_gp_details['id']
-    next_gp_name = f1_module.next_gp_details['name']
-    count = abs(count)
-    db_man.save_guess(name=interaction.user.name,id=interaction.user.id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_gp_id)
-    await interaction.response.send_message(f'<{interaction.user.name}: R_DNF: {count}: {next_gp_name.capitalize()}>',ephemeral=True)
-    logger.info(f"<{interaction.user.name}: R_DNF: {count}: {next_gp_name.capitalize()}>")
-"""
-
 @bot.tree.command(name="evaluate",description="-")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses
@@ -272,6 +227,8 @@ async def eval(ctx:discord.Interaction):
 
     # need some time
     await ctx.response.defer()
+
+    """
 
     # f1 data
 
@@ -406,7 +363,83 @@ async def eval(ctx:discord.Interaction):
         if str(user_id) in users_db.keys():
             users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = gp_total_point
             users_db[str(user_id)]["total_points"] += gp_total_point
+       
+    """ 
+    
+    # previous GP ID
+    prev_gp_id = f1_module.get_prev_gp_id()
+    # previous GP Name
+    prev_gp_name = f1_module.get_prev_gp_name()
+    # SCORE-TABLE 
+    score_board = {}
+    try:
+        with open(f'{SCORE_TABLE_PATH}', 'r') as f:
+            score_board = json.load(f)
+    except Exception as e:
+        logger.error(e)
+    score_board_df = f1_data.pd.DataFrame.from_dict(score_board, orient='index')
+    score_board_df.reset_index(inplace=True)
+    score_board_df.rename(columns={'index': 'category'}, inplace=True)
+    score_board_df.rename(columns={0: 'point'}, inplace=True)
         
+    # users info database
+    guess_database = {}
+    with open(f"{GUESS_DB_PATH}", "r") as f:
+        guess_database = json.load(f)
+    guess_db = f1_data.pd.DataFrame.from_dict(guess_database, orient='index')
+    guess_db.reset_index(inplace=True)
+    guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
+    guess_db_df = guess_db.iloc[::-1]
+    #logger.debug(f"{guess_db_df = }")
+    
+    # list of member's name
+    participants = get_discord_members(ctx)
+    
+    # dict of previous GP results
+    results = f1_module.get_all_results()
+    results_df = f1_data.pd.DataFrame.from_dict(results, orient='index')
+    results_df.reset_index(inplace=True)
+    results_df.rename(columns={'index': 'category'}, inplace=True)
+    results_df.rename(columns={0: 'result'}, inplace=True)
+    
+    
+    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on='category', how='left')
+    name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
+    name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on='category', how='left')
+    
+    name_guess_result_point_df.loc[name_guess_result_point_df['driver_name'] != name_guess_result_point_df['result'], 'point'] = 0  
+    
+    name_guess_result_point_df = name_guess_result_point_df.sort_values(by='user_name')
+    
+    name_guess_result_point_df = name_guess_result_point_df[name_guess_result_point_df['gp_id'] == prev_gp_id]
+    name_guess_result_point_df.reset_index(inplace=True)
+    name_guess_result_point_df = name_guess_result_point_df.drop(columns=['index'])
+    name_guess_result_point_df.rename(columns={'driver_name': 'guess'}, inplace=True)
+    
+    name_guess_result_point_df = name_guess_result_point_df.groupby('user_name').apply(lambda x: x.drop_duplicates('category')).reset_index(drop=True)
+    
+    descr = ""
+    
+    for user_name,user_id in participants.items():
+        selected_guesses = name_guess_result_point_df[name_guess_result_point_df['user_name'] == user_name]
+        points_sum = f1_data.pd.to_numeric(selected_guesses['point'].sum())
+        descr += f"{user_name}: {points_sum} pts\n"
+        # podium
+        """
+        row_r1 = selected_guesses[selected_guesses['category'] == 'R1']#['point']
+        row_r2 = selected_guesses[selected_guesses['category'] == 'R2']#['point']
+        row_r3 = selected_guesses[selected_guesses['category'] == 'R3']#['point']
+        podium_list = [0]
+        if not row_r1['point'].empty and not row_r2['point'].empty and not row_r3['point'].empty:
+            podium_list = [row_r1['point'].iloc[0],row_r2['point'].iloc[0],row_r3['point'].iloc[0]]
+        descr += "+ podium (1pt)\n" if all(element != 0 for element in podium_list) else "+ podium (1pt)\n"
+        logger.debug(f"{descr}")
+        #logger.debug(f"{user_name}: {points_sum}")
+        """
+    embed=discord.Embed(colour=0xFFFFFF,title=f"{prev_gp_name} leaderboard",description=descr)
+    await ctx.followup.send(embed=embed)
+    
+    return 0
                         
     await ctx.followup.send("Finished evaluating")
 
@@ -436,21 +469,6 @@ async def eval(ctx:discord.Interaction):
     sorted_scores = sorted(list(set(leader_board.values())), reverse=True)
     
     logger.debug(f"{sorted_scores = }")
-
-    """
-    {
-    "korgabor": 11,
-    "tth.csenge": 11,
-    "csokker99": 11,
-    "folkloresoft": 10,
-    "rossztosz": 9,
-    "venice71": 9,
-    "martinfaber": 9,
-    "mvince4": 9,
-    "otvosbernadett": 6,
-    "ghornyak": 5
-    }
-    """
 
     descr = ""
     enumarator = 0
@@ -583,6 +601,7 @@ async def myguess(ctx:discord.Interaction,username:str=""):
         user_name = username
     else:   
         user_name = ctx.user.name
+        
     cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user_name]
 
     race_name = f1_module.get_next_gp_name()
@@ -611,36 +630,75 @@ async def myguess(ctx:discord.Interaction,username:str=""):
 
     await ctx.response.send_message(file=discord.File(f"{USER_GUESS_HISTORY_PDF_PATH}_zoomed.png"),ephemeral=True)
 
-@bot.tree.command(name="mypoints",description="Show user's points in total")
-async def mypoints(ctx:discord.Interaction,username:str=""):
-    await ctx.response.send_message("Out of order")
-    return 0
-    users_db = {}
-    user_name = ""
-    if username:
-        user_name = username
-    else:   
-        user_name = ctx.user.name
-    with open(f"{USERS_DB_PATH}", "r") as f:
-            users_db = json.load(f)
-    cur_user_db = users_db[str(ctx.user.id)]
-    prev_race_id = f1_module.get_prev_gp_id()
-    prev_race_name = f1_module.get_prev_gp_name()
-    user_score = cur_user_db["round_score"][prev_race_id]["score_board"]
-    user_score_df = f1_data.pd.DataFrame.from_dict(user_score,orient='index')
-    user_score_df.rename(columns={0: 'Point'}, inplace=True)
-    #logger.info(f"{user_name = } {prev_race_name = } {user_score_df = }")
-    with open(f"{USER_POINT_HISTORY_PATH}",'w') as f:
-        f.write(f"### {'&nbsp;'*11} {user_name}'s score for {prev_race_name} {datetime.datetime.now().year}\n")
-        f.write(user_score_df.to_markdown())
-    cmd = f'pandoc {USER_POINT_HISTORY_PATH} -o {USER_POINT_HISTORY_PDF_PATH}.pdf'
-    cmd2 = f'pdftoppm {USER_POINT_HISTORY_PDF_PATH}.pdf {USER_POINT_HISTORY_PDF_PATH} -png'
-    cmd3 = f'convert {USER_POINT_HISTORY_PDF_PATH}-1.png -crop 500x500+350+235 {USER_POINT_HISTORY_PDF_PATH}_zoomed.png'
-    os.system(cmd)
-    os.system(cmd2)
-    os.system(cmd3)
-    await ctx.response.send_message(file=discord.File(f"{USER_POINT_HISTORY_PDF_PATH}_zoomed.png"))
+@bot.tree.command(name="generate_report",description="Complete report on results")
+async def generate_report(ctx:discord.Interaction):
+    """name | guess | result | point"""
+    # previous GP ID
+    prev_gp_id = f1_module.get_prev_gp_id()
+    # previous GP Name
+    prev_gp_name = f1_module.get_prev_gp_name()
+    # SCORE-TABLE 
+    score_board = {}
+    try:
+        with open(f'{SCORE_TABLE_PATH}', 'r') as f:
+            score_board = json.load(f)
+    except Exception as e:
+        logger.error(e)
+    score_board_df = f1_data.pd.DataFrame.from_dict(score_board, orient='index')
+    score_board_df.reset_index(inplace=True)
+    score_board_df.rename(columns={'index': 'category'}, inplace=True)
+    score_board_df.rename(columns={0: 'point'}, inplace=True)
+        
+    # users info database
+    guess_database = {}
+    with open(f"{GUESS_DB_PATH}", "r") as f:
+        guess_database = json.load(f)
+    guess_db = f1_data.pd.DataFrame.from_dict(guess_database, orient='index')
+    guess_db.reset_index(inplace=True)
+    guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
+    guess_db_df = guess_db.iloc[::-1]
+    #logger.debug(f"{guess_db_df = }")
+    
+    # list of member's name
+    participants = get_discord_members(ctx)
+    
+    # dict of previous GP results
+    results = f1_module.get_all_results()
+    results_df = f1_data.pd.DataFrame.from_dict(results, orient='index')
+    results_df.reset_index(inplace=True)
+    results_df.rename(columns={'index': 'category'}, inplace=True)
+    results_df.rename(columns={0: 'result'}, inplace=True)
+    
+    
+    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on='category', how='left')
+    name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp','user_id'])
+    name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on='category', how='left')
+    
+    name_guess_result_point_df.loc[name_guess_result_point_df['driver_name'] != name_guess_result_point_df['result'], 'point'] = 0  
+    
+    name_guess_result_point_df = name_guess_result_point_df.sort_values(by='user_name')
+    
+    name_guess_result_point_df = name_guess_result_point_df[name_guess_result_point_df['gp_id'] == prev_gp_id]
+    name_guess_result_point_df.reset_index(inplace=True)
+    name_guess_result_point_df = name_guess_result_point_df.drop(columns=['index'])
+    name_guess_result_point_df.rename(columns={'driver_name': 'guess'}, inplace=True)
+    
+    name_guess_result_point_df = name_guess_result_point_df.groupby('user_name').apply(lambda x: x.drop_duplicates('category')).reset_index(drop=True)
+    
 
+    with open(f"{REPORT_PATH}",'w') as f:
+        f.write(name_guess_result_point_df.to_markdown())
+    
+    #! TEST if multiple users create histories, and all files have the same name -> conflict or time delay is enough
+
+    cmd = f'pandoc {REPORT_PATH} -o {REPORT_PDF_PATH}.pdf'
+    #cmd2 = f'pdftoppm {USER_GUESS_HISTORY_PDF_PATH}.pdf {USER_GUESS_HISTORY_PDF_PATH} -png'
+    #cmd3 = f'convert {USER_GUESS_HISTORY_PDF_PATH}-1.png -crop 500x500+350+235 {USER_GUESS_HISTORY_PDF_PATH}_zoomed.png'
+    
+    os.system(cmd)
+    logger.info("markdown to pdf")
+    await ctx.response.send_message(file=discord.File(f"{REPORT_PDF_PATH}.pdf"))
+    
 #--------< Funny Functions aka Easter Eggs >----#
 
 @bot.tree.command(name="dadjoke",description="-")
