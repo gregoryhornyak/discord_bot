@@ -84,7 +84,7 @@ class F1DataFetcher:
     }
 
     #* Best three teams - for BestOfTheRest
-    best_three = ['Ferrari','Red Bull Racing','Mercedes']
+    best_three = ['FERRARI','RED BULL RACING HONDA RBPT','MERCEDES']
 
     #* All the formula one urls - driver is using 2023 -> needs to be changed into 2024
     formula_one_urls = {
@@ -316,7 +316,7 @@ class F1DataFetcher:
         next_event_soap_ids = [name.get('data-meetingkey') for name in next_event_soap_findings] # URLs
         next_event_id_and_url = list(zip(next_event_soap_hrefs,next_event_soap_ids))
         next_event_id_and_url_json = {event_id: event_url for event_url, event_id in next_event_id_and_url}
-        year_schedule_json = {event_id: {"url": event_url, "completed":False, "date":""} for event_id,event_url in next_event_id_and_url_json.items()}
+        year_schedule_json = {event_id: {"url": event_url, "completed":False, "end_date":""} for event_id,event_url in next_event_id_and_url_json.items()}
         self.grand_prix_calendar = year_schedule_json
         
         # get every gp (race) date 
@@ -341,16 +341,15 @@ class F1DataFetcher:
                     break
                 class_name = str("row "+race_type_class)
                 event_soap_finds = event_soap.find_all('div', class_=class_name)
-                event_start_date = [name.get('data-start-time') for name in event_soap_finds]
+                event_end_date = [name.get('data-end-time') for name in event_soap_finds]
                 event_time_offset = [name.get('data-gmt-offset') for name in event_soap_finds]
                 #logger.debug(f"{event_start_date[0] = }, {event_id = }, {class_name = }")
-                if event_start_date[0] == "TBC": # or not a number
+                if event_end_date[0] == "TBC": # or not a number
                     self.grand_prix_calendar[str(event_id)] = ""
-                converted_start_time = self.datetime_converter(event_start_date[0],event_time_offset[0])
-                datetime_obj = datetime.datetime.strftime(converted_start_time,LONG_DATE_FORMAT)
-                self.grand_prix_calendar[str(event_id)]["date"] = datetime_obj
+                converted_end_time = self.datetime_converter(event_end_date[0],event_time_offset[0])
+                datetime_obj = datetime.datetime.strftime(converted_end_time,LONG_DATE_FORMAT)
+                self.grand_prix_calendar[str(event_id)]["end_date"] = datetime_obj
                 if datetime.datetime.now() > datetime.datetime.strptime(datetime_obj,LONG_DATE_FORMAT):
-                    logger.debug(f"{str(event_id) = } has been.")
                     self.grand_prix_calendar[str(event_id)]["completed"] = True
                                       
         with open(f"{YEAR_SCHEDULE_PATH}","w") as f:
@@ -411,7 +410,6 @@ class F1DataFetcher:
             event_soap_finds = event_soap.find_all('div', class_=class_name)
             event_start_date = [name.get('data-start-time') for name in event_soap_finds]
             event_time_offset = [name.get('data-gmt-offset') for name in event_soap_finds]
-            logger.info(f"{class_name_pretty=}|Original time:{event_start_date[0]=} # {event_time_offset[0]=}|")
             converted_start_time = self.datetime_converter(event_start_date[0],event_time_offset[0])
             datetime_obj = datetime.datetime.strftime(converted_start_time,LONG_DATE_FORMAT)
             grand_prix_schedule[str(race_id)][class_name_pretty] = datetime_obj
@@ -419,6 +417,8 @@ class F1DataFetcher:
         #* next_event_details.json is loaded to replace true times | uncomment it for normal mode
         next_grand_prix_events = grand_prix_schedule[str(race_id)]
         self.next_gp_details["sessions"] = next_grand_prix_events
+
+    #! FIX UPDATE_URL VS. PREV_GP_ID PARADOX
 
     def update_urls(self) -> None:
         """Replace placeholders with values using regular expressions"""
@@ -481,8 +481,10 @@ class F1DataFetcher:
         self.prev_gp_details["results"]["R2"] = prev_race_table_df.loc[1]['Driver']
         self.prev_gp_details["results"]["R3"] = prev_race_table_df.loc[2]['Driver']
 
+        #logger.debug(f"{prev_race_table_df = }")
+
         for (driver, team) in (zip(prev_race_table_df['Driver'], prev_race_table_df['Car'])):
-            if team not in self.best_three:
+            if team.upper() not in self.best_three:
                 self.prev_gp_details["results"]["R_BOTR"] = driver
                 break
 
@@ -512,9 +514,7 @@ class F1DataFetcher:
         self.prev_gp_details["results"]["Q3"] = prev_qual_table_df.loc[2]['Driver']
 
         for (driver, team) in (zip(prev_qual_table_df['Driver'], prev_qual_table_df['Car'])):
-            #
             if team.upper() not in self.best_three:
-                #
                 self.prev_gp_details["results"]["Q_BOTR"] = driver
                 break
 
