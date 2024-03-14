@@ -3,7 +3,7 @@ import json
 # paths
 
 UPCOMING_DATE_PATH =    "resources/data/upcoming_date"
-PREV_GP_DETAILS_PATH =  "resources/data/prev_gp_details.json"
+PREV_GPS_DETAILS_PATH =  "resources/data/prev_gps_details.json"
 NEXT_GP_DETAILS_PATH =  "resources/data/next_gp_details.json"
 NEXT_GP_DRIVERS_INFO_PATH =  "resources/data/next_gp_drivers_info.json"
 NEXT_GP_CATEGORIES_PATH =    "resources/data/next_gp_categories.json"
@@ -59,3 +59,16 @@ GRATULATION_PHRASES = ["Bravo","Kudos","Superb"]
 # date formats
 
 LONG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
+
+# header names
+#todo add _HEADER to variable names
+
+CATEGORY =      "category" # grand prix guess categories
+DRIVER =        "driver" # driver / dnf value
+USERNAME =      "user_name" # user name
+USER_ID =       "user_id" # user id
+RESULT =        "result" # result of grand prix category
+GP_ID =         "gp_id" # id of grand prix
+GP_NAME =       "gp_name"
+GUESS =         "guess" # the guess value
+SCORE =         "score" # the score for the category
