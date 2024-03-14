@@ -61,6 +61,7 @@ GRATULATION_PHRASES = ["Bravo","Kudos","Superb"]
 LONG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 # header names
+#todo add _HEADER to variable names
 
 CATEGORY =      "category" # grand prix guess categories
 DRIVER =        "driver" # driver / dnf value
