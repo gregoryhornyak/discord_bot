@@ -291,7 +291,9 @@ async def eval(ctx:discord.Interaction):
     #! standardise column header names - use CONSTANTS
     
     # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.merge.html
-    # name_guess_result_df = f1_data.pd.merge(guess_db_df, results_df,  how='left', left_on=['gp_id','c2'], right_on = ['B_c1','c2'])
+
+    # name_guess_result_df = pd.DataFrame.merge(guess_db_df, all_gp_results_df, on=["gp_id","category"], how='inner')  WORKING!!
+    
     name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on=CATEGORY, how='left')
     name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
     name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on=CATEGORY, how='left')
