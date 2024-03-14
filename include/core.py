@@ -293,6 +293,25 @@ async def eval(ctx:discord.Interaction):
     # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.merge.html
 
     # name_guess_result_df = pd.DataFrame.merge(guess_db_df, all_gp_results_df, on=["gp_id","category"], how='inner')  WORKING!!
+
+    """ WORKING CODE !
+    guess_db_df = pd.DataFrame.from_dict(guess_db, orient='index')
+    guess_db_df.reset_index(inplace=True)
+    guess_db_df.rename(columns={'index': 'time_stamp'}, inplace=True)
+    guess_db_df = guess_db_df.iloc[::-1]
+    
+    all_gp_results_df = pd.DataFrame(columns=["gp_id","GP_NAME","category","result"])
+    for gp_id, gp_info in result_db.items():
+        for category,result in gp_info["results"].items():
+            all_gp_results_df.loc[len(all_gp_results_df)] = {"gp_id":gp_id, "GP_NAME":gp_info["name"], "category":category, "result":result}
+    
+    name_guess_result_df = pd.DataFrame.merge(guess_db_df, all_gp_results_df, on=["gp_id","category"], how='inner')
+    name_guess_result_df = name_guess_result_df.groupby("name").apply(lambda x: x.drop_duplicates("category")).reset_index(drop=True)
+    name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
+    name_guess_result_df.loc[name_guess_result_df["guess"] != name_guess_result_df["result"], "score"] = 0
+    name_guess_result_df.loc[name_guess_result_df["guess"] == name_guess_result_df["result"], "score"] = 1
+    """
+    
     
     name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on=CATEGORY, how='left')
     name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
