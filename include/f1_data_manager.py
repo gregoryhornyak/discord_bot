@@ -460,7 +460,7 @@ class F1DataFetcher:
                 #self.prev_gp_details["results"]
                 local_dict["R_BOTR"] = driver
                 break
-        local_dict["R_DNF"] = ''
+        local_dict["R_DNF"] = '0'
         for state in prev_race_table_df['Time/Retired']:
             if state in ['DNS','DNF']:
                 if local_dict["R_DNF"] == '':
