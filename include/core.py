@@ -33,7 +33,7 @@ def get_channel_info(to_return="CHANNEL_ID"):
         discord_data = json.load(f)
     if to_return.lower() == "channel_id":
         return discord_data["CHANNEL_ID"]
-    elif to_return.lower() == "server_id":
+    if to_return.lower() == "server_id":
         return discord_data["SERVER_ID"]
 
 @bot.event
@@ -136,7 +136,7 @@ async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
             except AttributeError:
                 await member.default_avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
 
-@bot.tree.command(name="guess",description="Make a guess for a category and a driver")
+@bot.tree.command(name="guess2",description="Make a guess for a category and a driver")
 async def guess(ctx:discord.Interaction): #include DNF
     """Allows the user to make a guess"""
     await ctx.response.defer(ephemeral=True)
@@ -220,7 +220,7 @@ async def guess(ctx:discord.Interaction): #include DNF
     await ctx.followup.send(content=message, view=theView)
     #await ctx.edit_original_response()
 
-@bot.tree.command(name="evaluate",description="-")
+@bot.tree.command(name="evaluate2",description="-")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses
     could only happen after the race"""
@@ -228,7 +228,6 @@ async def eval(ctx:discord.Interaction):
     # need some time
     await ctx.response.defer()
 
-    """
     # EVALUATING
 
     # 1. find all the users who guessed (if didnt, out of game)
@@ -239,58 +238,6 @@ async def eval(ctx:discord.Interaction):
     #
     # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
     #
-
-    #logger.info(f"{f1_module.prev_gp_details = }")
-
-    ## ready for evaluation  
-
-    # for every user
-    for user_name, user_id in members.items():
-        # for every guess
-        for (guessed_category, guessed_driver_name) in (zip(user_guesses_unique['category'], user_guesses_unique['driver_name'])):
-            # for every category's result
-            for category,driver_name in results.items():
-                # for every category
-                if guessed_category == category:
-                    # for every guess 
-                    if guessed_driver_name == driver_name:
-                        # if guess for current gp
-                        if str(gp_id) == guess_for_gp_id:
-                            
-                            if str(category) in scoring_board:                            
-                                point = scoring_board[category] # each category's score
-                            else:
-                                logger.info("EVAL: missing race type")
-                            #logger.info(f"{user_name}: {category},{driver_name} - {point} point")
-                            #await channel.send(f"{user_name}: {category} - {driver_name} -> {point} point")
-
-                            # check if user_guesses_unique["time_stamp"] valid
-
-                            #logger.debug(f"{race_name = }")
-
-                            if str(user_id) not in users_db:
-                                users_db[str(user_id)] = {
-                                    "user_name": user_name,
-                                    "grand_prix": {},
-                                    "total_points": 0
-                                    }
-                            if str(gp_id) not in users_db[str(user_id)]["grand_prix"]:
-                                users_db[str(user_id)]["grand_prix"][str(gp_id)] = {}
-                            
-                            if "date" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["date"] = ""
-                            if "name" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["name"] = race_name
-                            if "results" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"] = {}
-                            if "gp_total_points" not in users_db[str(user_id)]["grand_prix"][str(gp_id)]:
-                                users_db[str(user_id)]["grand_prix"][str(gp_id)]["gp_total_points"] = 0
-                            
-                            # but not change for points, to restrict overwriting guesses
-                            
-                            users_db[str(user_id)]["grand_prix"][str(gp_id)]["results"][category] = point # if not DNF
-                            gp_total_point += point
-    """ 
     
     # previous GP ID
     prev_gp_id = f1_module.get_prev_gp_id()
@@ -321,11 +268,20 @@ async def eval(ctx:discord.Interaction):
     participants = get_discord_members(ctx)
     
     # dict of previous GP results
-    results = f1_module.get_all_results()
-    results_df = f1_data.pd.DataFrame.from_dict(results, orient='index')
+    prev_gp_results = f1_module.get_all_results()
+    results_df = f1_data.pd.DataFrame.from_dict(prev_gp_results, orient='index')
     results_df.reset_index(inplace=True)
     results_df.rename(columns={'index': 'category'}, inplace=True)
     results_df.rename(columns={0: 'result'}, inplace=True)
+    
+    all_gp_results = f1_module.get_all_prev_gps_details()
+    all_gp_results = {key: {'name': value['name'],"results": value['results']} for key, value in all_gp_results.items()}
+    all_gp_results_df = f1_data.pd.DataFrame.from_dict(all_gp_results, orient='index')
+    all_gp_results_df.reset_index(inplace=True)
+    all_gp_results_df.rename(columns={'index': 'gp_id'}, inplace=True)
+    all_gp_results_df = all_gp_results_df.explode('results').reset_index(drop=True)
+    
+    logger.debug(f"\n\n{all_gp_results_df = }")#\n\n{guess_db_df = }\n\n")
     
     name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on='category', how='left')
     name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
@@ -355,9 +311,10 @@ async def eval(ctx:discord.Interaction):
         descr += f"{user_name}: {points_sum} pts"
         #podium
         try:
-            logger.debug(f"len({username}.podium)={selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0]}")
+            #logger.debug(f"len({user_name}.podium)={selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0]}")
             if selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0] == 3: # all podium guesses exist
                 selected_podium_guesses = selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])]
+                #logger.debug(f"None of them is zero: {(selected_podium_guesses['point']!=0).all()}")
                 if (selected_podium_guesses['point']!=0).all(): # none of them is zero
                     descr += " + podium (1pt)"
         except Exception as e:
@@ -414,7 +371,7 @@ async def force_fetch(interaction:Interaction,password:str):
         if password!=found_pw:
             await interaction.response.send_message("Wrong password")
             return 0
-    f1_module.daily_fetch(forced=True)
+    f1_module.fetch_menu(forced=True)
     logger.info("F1 modules fetched up-to-date info")
     await interaction.response.send_message("Force fetching completed",ephemeral=True)
 
