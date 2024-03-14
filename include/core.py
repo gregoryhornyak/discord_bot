@@ -275,12 +275,17 @@ async def eval(ctx:discord.Interaction):
     results_df.rename(columns={0: 'result'}, inplace=True)
     
     all_gp_results = f1_module.get_all_prev_gps_details()
+    all_gp_results_df = f1_module.pd.DataFrame(columns=["gp_id","name","category","outcome"])
+    for gp_id, gp_info in all_gp_results.items():
+        for category,outcome in gp_info["results"].items():
+            all_gp_results_df.loc[len(all_gp_results_df)] = {"id":gp_id, "name":gp_info["name"], "category":category, "outcome":outcome}
+    """        
     all_gp_results = {key: {'name': value['name'],"results": value['results']} for key, value in all_gp_results.items()}
     all_gp_results_df = f1_data.pd.DataFrame.from_dict(all_gp_results, orient='index')
     all_gp_results_df.reset_index(inplace=True)
     all_gp_results_df.rename(columns={'index': 'gp_id'}, inplace=True)
     all_gp_results_df = all_gp_results_df.explode('results').reset_index(drop=True)
-    
+    """
     logger.debug(f"\n\n{all_gp_results_df = }")#\n\n{guess_db_df = }\n\n")
     
     name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on='category', how='left')
