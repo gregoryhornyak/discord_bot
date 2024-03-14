@@ -310,6 +310,13 @@ async def eval(ctx:discord.Interaction):
     name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
     name_guess_result_df.loc[name_guess_result_df["guess"] != name_guess_result_df["result"], "score"] = 0
     name_guess_result_df.loc[name_guess_result_df["guess"] == name_guess_result_df["result"], "score"] = 1
+    
+    local_dict = {}
+    for user in name_guess_result_df['name'].unique():
+        cur_user_db = name_guess_result_df[name_guess_result_df['name']==user]
+        local_dict[user] = {}
+        for gp in cur_user_db['gp_id'].unique():
+            local_dict[user][gp] = pd.Series(cur_user_db['score'].values,index=cur_user_db['result']).to_dict()
     """
     
     
