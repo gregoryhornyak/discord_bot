@@ -252,8 +252,8 @@ async def eval(ctx:discord.Interaction):
         logger.error(e)
     score_board_df = f1_data.pd.DataFrame.from_dict(score_board, orient='index')
     score_board_df.reset_index(inplace=True)
-    score_board_df.rename(columns={'index': 'category'}, inplace=True)
-    score_board_df.rename(columns={0: 'point'}, inplace=True)
+    score_board_df.rename(columns={'index': CATEGORY}, inplace=True)
+    score_board_df.rename(columns={0: SCORE}, inplace=True)
         
     # guess database
     guess_database = {}
@@ -271,14 +271,14 @@ async def eval(ctx:discord.Interaction):
     prev_gp_results = f1_module.get_all_results()
     results_df = f1_data.pd.DataFrame.from_dict(prev_gp_results, orient='index')
     results_df.reset_index(inplace=True)
-    results_df.rename(columns={'index': 'category'}, inplace=True)
-    results_df.rename(columns={0: 'result'}, inplace=True)
+    results_df.rename(columns={'index': CATEGORY}, inplace=True)
+    results_df.rename(columns={0: RESULT}, inplace=True)
     
     all_gp_results = f1_module.get_all_prev_gps_details()
-    all_gp_results_df = f1_module.pd.DataFrame(columns=["gp_id","name","category","outcome"])
+    all_gp_results_df = f1_module.pd.DataFrame(columns=[GP_ID,GP_NAME,CATEGORY,RESULT])
     for gp_id, gp_info in all_gp_results.items():
         for category,outcome in gp_info["results"].items():
-            all_gp_results_df.loc[len(all_gp_results_df)] = {"id":gp_id, "name":gp_info["name"], "category":category, "outcome":outcome}
+            all_gp_results_df.loc[len(all_gp_results_df)] = {GP_ID:gp_id, GP_NAME:gp_info[GP_NAME], CATEGORY:category, RESULT:outcome}
     """        
     all_gp_results = {key: {'name': value['name'],"results": value['results']} for key, value in all_gp_results.items()}
     all_gp_results_df = f1_data.pd.DataFrame.from_dict(all_gp_results, orient='index')
@@ -292,22 +292,22 @@ async def eval(ctx:discord.Interaction):
     
     # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.merge.html
     # name_guess_result_df = f1_data.pd.merge(guess_db_df, results_df,  how='left', left_on=['gp_id','c2'], right_on = ['B_c1','c2'])
-    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on='category', how='left')
+    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on=CATEGORY, how='left')
     name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
-    name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on='category', how='left')
+    name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on=CATEGORY, how='left')
 
     # database with users, their guess, the results, the score - for all Grand Prix. 
-    name_guess_result_point_df.loc[name_guess_result_point_df['driver_name'] != name_guess_result_point_df['result'], 'point'] = 0  
+    name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER] != name_guess_result_point_df[RESULT], SCORE] = 0  
     
-    name_guess_result_point_df = name_guess_result_point_df.sort_values(by='user_name')
+    name_guess_result_point_df = name_guess_result_point_df.sort_values(by=USER_NAME)
     # filter for current grand prix
-    name_guess_result_point_df = name_guess_result_point_df[name_guess_result_point_df['gp_id'] == prev_gp_id]
+    name_guess_result_point_df = name_guess_result_point_df[name_guess_result_point_df[GP_ID] == prev_gp_id]
     name_guess_result_point_df.reset_index(inplace=True)
     name_guess_result_point_df = name_guess_result_point_df.drop(columns=['index'])
-    name_guess_result_point_df.rename(columns={'driver_name': 'guess'}, inplace=True)
+    name_guess_result_point_df.rename(columns={DRIVER: GUESS}, inplace=True)
 
     #todo groupby(users) and also groupby(gp_id) to preserve all categories for all grand prix
-    name_guess_result_point_df = name_guess_result_point_df.groupby('user_name').apply(lambda x: x.drop_duplicates('category')).reset_index(drop=True)
+    name_guess_result_point_df = name_guess_result_point_df.groupby(USER_NAME).apply(lambda x: x.drop_duplicates(CATEGORY)).reset_index(drop=True)
     
     logger.info("Evaluation completed")
     await ctx.followup.send("Finished evaluating")
@@ -315,16 +315,16 @@ async def eval(ctx:discord.Interaction):
     descr = ""
     
     for user_name,user_id in participants.items():
-        selected_guesses = name_guess_result_point_df[name_guess_result_point_df['user_name'] == user_name]
-        points_sum = f1_data.pd.to_numeric(selected_guesses['point'].sum())
+        selected_guesses = name_guess_result_point_df[name_guess_result_point_df[USER_NAME] == user_name]
+        points_sum = f1_data.pd.to_numeric(selected_guesses[SCORE].sum())
         descr += f"{user_name}: {points_sum} pts"
         #podium
         try:
             #logger.debug(f"len({user_name}.podium)={selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0]}")
-            if selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0] == 3: # all podium guesses exist
-                selected_podium_guesses = selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])]
+            if selected_guesses[selected_guesses[CATEGORY].isin(['R1','R2','R3'])].shape[0] == 3: # all podium guesses exist
+                selected_podium_guesses = selected_guesses[selected_guesses[CATEGORY].isin(['R1','R2','R3'])]
                 #logger.debug(f"None of them is zero: {(selected_podium_guesses['point']!=0).all()}")
-                if (selected_podium_guesses['point']!=0).all(): # none of them is zero
+                if (selected_podium_guesses[SCORE]!=0).all(): # none of them is zero
                     descr += " + podium (1pt)"
         except Exception as e:
             logger.error(e)
