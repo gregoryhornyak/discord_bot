@@ -138,7 +138,7 @@ async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
             except AttributeError:
                 await member.default_avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
 
-@bot.tree.command(name="guess2",description="Make a guess for a category and a driver")
+@bot.tree.command(name="guess",description="Make a guess for a category and a driver")
 async def guess(ctx:discord.Interaction): #include DNF
     """Allows the user to make a guess"""
     await ctx.response.defer(ephemeral=True)
@@ -345,7 +345,7 @@ async def eval(ctx:discord.Interaction):
     except TypeError:
         logger.debug("INT64 error")
 
-@bot.tree.command(name="force_fetch2",description="ADMIN - Fetch latest info right now")
+@bot.tree.command(name="force_fetch",description="ADMIN - Fetch latest info right now")
 async def force_fetch(interaction:Interaction,password:str):    
     with open(f"{PASSW_PATH}",'r') as f:
         found_pw = f.read().strip()
@@ -435,7 +435,6 @@ async def myguess(ctx:discord.Interaction,username:str=""):
 
 @bot.tree.command(name="generate_report",description="Complete report on results")
 async def generate_report(ctx:discord.Interaction):
-#async def generate_report(ctx:discord.Interaction,gp:typing.Literal["Bahrain","Saudi Arabia"]="Saudi Arabia",uname:typing.Literal["user01","user02","user03"]="current_user"):
     """name | guess | result | point"""
 
     complete_df= get_complete_database()
@@ -448,13 +447,11 @@ async def generate_report(ctx:discord.Interaction):
     complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID,DRIVER_NAME])
     
     with open(f"{REPORT_PATH}",'w') as f:
-        f.write(complete_df.to_markdown())
+        f.write(complete_df.to_markdown(index=False))
     
     #! TEST if multiple users create histories, and all files have the same name -> conflict or time delay is enough
 
     cmd = f'pandoc {REPORT_PATH} -o {REPORT_PDF_PATH}.pdf'
-    #cmd2 = f'pdftoppm {USER_GUESS_HISTORY_PDF_PATH}.pdf {USER_GUESS_HISTORY_PDF_PATH} -png'
-    #cmd3 = f'convert {USER_GUESS_HISTORY_PDF_PATH}-1.png -crop 500x500+350+235 {USER_GUESS_HISTORY_PDF_PATH}_zoomed.png'
     
     os.system(cmd)
     logger.info("markdown to pdf")

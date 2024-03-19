@@ -627,7 +627,7 @@ class F1DataFetcher:
     def get_prev_gp_id(self):
         logger.info("Sending previous grand prix id")
         sorted_gp_ids = sorted(list(self.all_prev_gp_details.keys()))
-        return sorted_gp_ids[0]
+        return sorted_gp_ids[-1]
     
     def get_prev_gp_name(self):
         logger.info("Sending previous grand prix name")
