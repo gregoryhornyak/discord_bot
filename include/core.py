@@ -222,7 +222,7 @@ async def guess(ctx:discord.Interaction): #include DNF
     await ctx.followup.send(content=message, view=theView)
     #await ctx.edit_original_response()
 
-def get_complete_database(ctx) -> f1_data.pd.DataFrame:
+def get_complete_database() -> f1_data.pd.DataFrame:
     
     # SCORE-TABLE 
     score_board = {}
@@ -244,9 +244,6 @@ def get_complete_database(ctx) -> f1_data.pd.DataFrame:
     guess_db.reset_index(inplace=True)
     guess_db.rename(columns={'index': TIME_STAMP}, inplace=True)
     guess_db_df = guess_db.iloc[::-1]
-    
-    # list of member's name
-    participants = get_discord_members(ctx)
     
     # dict of previous GP results
     
@@ -272,7 +269,7 @@ def get_complete_database(ctx) -> f1_data.pd.DataFrame:
     name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER_NAME] != name_guess_result_point_df[RESULT], SCORE] = 0
     return name_guess_result_point_df
 
-@bot.tree.command(name="evaluate2",description="-")
+@bot.tree.command(name="evaluate",description="-")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses
     could only happen after the race"""
@@ -441,9 +438,15 @@ async def generate_report(ctx:discord.Interaction):
 #async def generate_report(ctx:discord.Interaction,gp:typing.Literal["Bahrain","Saudi Arabia"]="Saudi Arabia",uname:typing.Literal["user01","user02","user03"]="current_user"):
     """name | guess | result | point"""
 
-    complete_df:f1_data.pd.DataFrame = get_complete_database(ctx)    
-    complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID,GUESS])
-
+    complete_df= get_complete_database()
+    logger.debug(f"{ctx.user.id = }")
+    logger.debug(f"{complete_df[complete_df[USER_ID] == str(ctx.user.id)] = }")
+    try:
+        complete_df = complete_df[complete_df[USER_ID] == str(ctx.user.id)]
+    except Exception as e:
+        logger.error(e)
+    complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID,DRIVER_NAME])
+    
     with open(f"{REPORT_PATH}",'w') as f:
         f.write(complete_df.to_markdown())
     
@@ -455,7 +458,7 @@ async def generate_report(ctx:discord.Interaction):
     
     os.system(cmd)
     logger.info("markdown to pdf")
-    await ctx.response.send_message(file=discord.File(f"{REPORT_PDF_PATH}.pdf"))
+    await ctx.response.send_message(file=discord.File(f"{REPORT_PDF_PATH}.pdf"),ephemeral=True)
     
 #--------< Funny Functions aka Easter Eggs >----#
 
