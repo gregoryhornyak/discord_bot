@@ -222,7 +222,7 @@ async def guess(ctx:discord.Interaction): #include DNF
     await ctx.followup.send(content=message, view=theView)
     #await ctx.edit_original_response()
 
-@bot.tree.command(name="evaluate",description="-")
+@bot.tree.command(name="evaluate2",description="-")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses
     could only happen after the race"""
@@ -299,9 +299,9 @@ async def eval(ctx:discord.Interaction):
         }
         for gp in cur_user_db[GP_ID].unique():
             cur_user_cur_gp_db = cur_user_db[cur_user_db[GP_ID]==gp]
-            local_dict[user_id]["grand_prix"][gp] = f1_data.pd.Series(cur_user_cur_gp_db[SCORE].values,index=cur_user_cur_gp_db[CATEGORY]).to_dict()
-            local_dict[user_id]["grand_prix"][gp] = {key: int(value) for key, value in local_dict[user_id]["grand_prix"][gp].items()}
-            local_dict[user_id]["grand_prix"][gp]["grand_prix_score"] = cur_user_cur_gp_db[SCORE].values.sum()
+            cat_sco_table = f1_data.pd.Series(cur_user_cur_gp_db[SCORE].values,index=cur_user_cur_gp_db[CATEGORY]).to_dict()
+            local_dict[user_id]["grand_prix"][gp] = {key: int(value) for key, value in cat_sco_table.items()}
+            local_dict[user_id]["grand_prix"][gp]["grand_prix_score"] = int(cur_user_cur_gp_db[SCORE].values.sum())
             local_dict[user_id]["grand_prix"][gp]["podium_score"] = 0
             table = local_dict[user_id]["grand_prix"][gp]
             try:
@@ -342,7 +342,7 @@ async def eval(ctx:discord.Interaction):
     except TypeError:
         logger.debug("INT64 error")
 
-@bot.tree.command(name="force_fetch",description="ADMIN - Fetch latest info right now")
+@bot.tree.command(name="force_fetch2",description="ADMIN - Fetch latest info right now")
 async def force_fetch(interaction:Interaction,password:str):    
     with open(f"{PASSW_PATH}",'r') as f:
         found_pw = f.read().strip()
