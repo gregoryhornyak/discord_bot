@@ -222,7 +222,7 @@ async def guess(ctx:discord.Interaction): #include DNF
     await ctx.followup.send(content=message, view=theView)
     #await ctx.edit_original_response()
 
-@bot.tree.command(name="evaluate2",description="-")
+@bot.tree.command(name="evaluate",description="-")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses
     could only happen after the race"""
@@ -342,7 +342,7 @@ async def eval(ctx:discord.Interaction):
     except TypeError:
         logger.debug("INT64 error")
 
-@bot.tree.command(name="force_fetch2",description="ADMIN - Fetch latest info right now")
+@bot.tree.command(name="force_fetch",description="ADMIN - Fetch latest info right now")
 async def force_fetch(interaction:Interaction,password:str):    
     with open(f"{PASSW_PATH}",'r') as f:
         found_pw = f.read().strip()
