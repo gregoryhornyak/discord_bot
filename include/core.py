@@ -27,6 +27,8 @@ bot = commands.Bot(command_prefix="/",intents=discord.Intents.all())
 
 f1_module = f1_data.F1DataFetcher()
 
+# new feature: in logs, show: time|user|command|success 
+
 def get_channel_info(to_return="CHANNEL_ID"):
     """to_return = channel_id / server_id"""
     with open(f"{SERVER_CHANNEL_ID_PATH}","r") as f:
@@ -119,13 +121,13 @@ async def upgrade(interaction:Interaction,password:str):
     await bot.close()
 
 def get_discord_members(ctx:Interaction): # dont change it
-    """user_name: user_id"""
+    """user_id: user_name"""
     user_info = {}
     for member in ctx.guild.members:
         if member.name != "lord_maldonado":
-            user_info[member.name] = member.id
+            user_info[str(member.id)] = member.name
     # if csokker not in db
-    user_info["csokker99"] = 69420
+    user_info["69420"] = "csokker99"
     return user_info
 
 async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
@@ -239,10 +241,6 @@ async def eval(ctx:discord.Interaction):
     # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
     #
     
-    # previous GP ID
-    prev_gp_id = f1_module.get_prev_gp_id()
-    # previous GP Name
-    prev_gp_name = f1_module.get_prev_gp_name()
     # SCORE-TABLE 
     score_board = {}
     try:
@@ -261,7 +259,7 @@ async def eval(ctx:discord.Interaction):
         guess_database = json.load(f)
     guess_db = f1_data.pd.DataFrame.from_dict(guess_database, orient='index')
     guess_db.reset_index(inplace=True)
-    guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
+    guess_db.rename(columns={'index': TIME_STAMP}, inplace=True)
     guess_db_df = guess_db.iloc[::-1]
     
     # list of member's name
@@ -272,125 +270,77 @@ async def eval(ctx:discord.Interaction):
     all_gp_results = f1_module.get_all_prev_gps_details()
     all_gp_results_df = f1_data.pd.DataFrame(columns=[GP_ID,GP_NAME,CATEGORY,RESULT])
     for gp_id, gp_info in all_gp_results.items():
-        for category,outcome in gp_info["results"].items():
+        for category,outcome in gp_info[RESULT].items():
             all_gp_results_df.loc[len(all_gp_results_df)] = {GP_ID:gp_id, GP_NAME:gp_info[GP_NAME], CATEGORY:category, RESULT:outcome}
-
-    #logger.debug(f"\n\n{all_gp_results_df = }")#\n\n{guess_db_df = }\n\n")
-
-    #! standardise column header names - use CONSTANTS
     
-    # https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.merge.html
-
-    # name_guess_result_df = pd.DataFrame.merge(guess_db_df, all_gp_results_df, on=["gp_id","category"], how='inner')  WORKING!!
-    
-    users_db_df = f1_data.pd.DataFrame(columns=["gp_id","GP_NAME","category","result"])
+    users_db_df = f1_data.pd.DataFrame(columns=[GP_ID,GP_NAME,CATEGORY,RESULT])
     for gp_id, gp_info in all_gp_results.items():
-        for category,result in gp_info["results"].items():
-            users_db_df.loc[len(users_db_df)] = {"gp_id":gp_id, "GP_NAME":gp_info["name"], "category":category, "result":result}
+        for category,result in gp_info[RESULT].items():
+            users_db_df.loc[len(users_db_df)] = {GP_ID:gp_id, GP_NAME:gp_info[GP_NAME], CATEGORY:category, RESULT:result}
     
-    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, users_db_df, on=["gp_id","category"], how='inner')
-    name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
-    name_guess_result_df = name_guess_result_df.sort_values(by="user_name")
-    with f1_data.pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
-        #print(df)
-        logger.debug(f"{name_guess_result_df = }")
-    return 0
-    name_guess_result_df = name_guess_result_df.groupby("user_name").apply(lambda x: x.drop_duplicates("category")).reset_index(drop=True)
-    
-
-    return 0
-    name_guess_result_df.loc[name_guess_result_df["guess"] != name_guess_result_df["result"], "score"] = 0
-    name_guess_result_df.loc[name_guess_result_df["guess"] == name_guess_result_df["result"], "score"] = 1
-    
-    local_dict = {}
-    for user in name_guess_result_df['name'].unique():
-        cur_user_db = name_guess_result_df[name_guess_result_df['name']==user]
-        local_dict[user] = {}
-        for gp in cur_user_db['gp_id'].unique():
-            local_dict[user][gp] = f1_data.pd.Series(cur_user_db['score'].values,index=cur_user_db['result']).to_dict()
-    
-    return 0
-    
-    
-    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on=CATEGORY, how='left')
-    name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp'])
+    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, users_db_df, on=[GP_ID,CATEGORY], how='inner')
+    name_guess_result_df = name_guess_result_df.sort_values(by=[USERNAME,TIME_STAMP])
+    name_guess_result_df = name_guess_result_df.iloc[::-1] # reverse dataframe -> latest first
+    # since latest first, uniques will be marked by first occurance -> rest deleted
+    name_guess_result_df = name_guess_result_df.groupby([USERNAME,GP_ID]).apply(lambda x: x.drop_duplicates(CATEGORY)).reset_index(drop=True)
+    # assign points to categories
     name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on=CATEGORY, how='left')
+    # take away points if wrong guess
+    name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER_NAME] != name_guess_result_point_df[RESULT], SCORE] = 0
+    complete_df = name_guess_result_point_df
+    #todo convert this dictionary-transform into a dataframe -> dict using built-in Pandas methods
+    local_dict = {}
+    for user_id in complete_df[USER_ID].unique():
+        cur_user_db = complete_df[complete_df[USER_ID]==user_id]
+        local_dict[user_id] = {
+            USERNAME: participants[user_id],
+            "grand_prix": {},
+            "session_score": 0
+        }
+        for gp in cur_user_db[GP_ID].unique():
+            cur_user_cur_gp_db = cur_user_db[cur_user_db[GP_ID]==gp]
+            local_dict[user_id]["grand_prix"][gp] = f1_data.pd.Series(cur_user_cur_gp_db[SCORE].values,index=cur_user_cur_gp_db[CATEGORY]).to_dict()
+            local_dict[user_id]["grand_prix"][gp] = {key: int(value) for key, value in local_dict[user_id]["grand_prix"][gp].items()}
+            local_dict[user_id]["grand_prix"][gp]["grand_prix_score"] = cur_user_cur_gp_db[SCORE].values.sum()
+            local_dict[user_id]["grand_prix"][gp]["podium_score"] = 0
+            table = local_dict[user_id]["grand_prix"][gp]
+            try:
+                if table["R1"] !=0 and table["R2"] !=0 and table["R3"] !=0:
+                    local_dict[user_id]["grand_prix"][gp]["podium_score"] = 1
+            except KeyError:
+                logger.info(f"{user_id} - no podium")
+        for gp_id in local_dict[user_id]["grand_prix"].keys():
+            local_dict[user_id]["session_score"] += local_dict[user_id]["grand_prix"][gp_id]["grand_prix_score"]
+        local_dict[user_id]["session_score"] += local_dict[user_id]["grand_prix"][gp]["podium_score"]
 
-    # database with users, their guess, the results, the score - for all Grand Prix. 
-    name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER] != name_guess_result_point_df[RESULT], SCORE] = 0  
-    
-    name_guess_result_point_df = name_guess_result_point_df.sort_values(by=USER_NAME)
-    # filter for current grand prix
-    name_guess_result_point_df = name_guess_result_point_df[name_guess_result_point_df[GP_ID] == prev_gp_id]
-    name_guess_result_point_df.reset_index(inplace=True)
-    name_guess_result_point_df = name_guess_result_point_df.drop(columns=['index'])
-    name_guess_result_point_df.rename(columns={DRIVER: GUESS}, inplace=True)
 
-    #todo groupby(users) and also groupby(gp_id) to preserve all categories for all grand prix
-    name_guess_result_point_df = name_guess_result_point_df.groupby(USER_NAME).apply(lambda x: x.drop_duplicates(CATEGORY)).reset_index(drop=True)
-    
     logger.info("Evaluation completed")
-    await ctx.followup.send("Finished evaluating")
+    
+    # create leaderboard
+    scores = {user_info[USERNAME]:user_info["session_score"] for user_info in local_dict.values()}
+    unique_scores = {value for value in scores.values()}
     
     descr = ""
-    
-    for user_name,user_id in participants.items():
-        selected_guesses = name_guess_result_point_df[name_guess_result_point_df[USER_NAME] == user_name]
-        points_sum = f1_data.pd.to_numeric(selected_guesses[SCORE].sum())
-        descr += f"{user_name}: {points_sum} pts"
-        #podium
-        try:
-            #logger.debug(f"len({user_name}.podium)={selected_guesses[selected_guesses['category'].isin(['R1','R2','R3'])].shape[0]}")
-            if selected_guesses[selected_guesses[CATEGORY].isin(['R1','R2','R3'])].shape[0] == 3: # all podium guesses exist
-                selected_podium_guesses = selected_guesses[selected_guesses[CATEGORY].isin(['R1','R2','R3'])]
-                #logger.debug(f"None of them is zero: {(selected_podium_guesses['point']!=0).all()}")
-                if (selected_podium_guesses[SCORE]!=0).all(): # none of them is zero
-                    descr += " + podium (1pt)"
-        except Exception as e:
-            logger.error(e)
-        finally:
-            descr += "\n"
-    embed=discord.Embed(colour=0xFFFFFF,title=f"{prev_gp_name} leaderboard",description=descr)
-    await ctx.followup.send(embed=embed)
-    
-    return 0
-    #* Calculate overall points:
-    # df.groupby(['user_name','category']).sum()
-    """
-    for user_id,user_details in users_db.items():
-        total_points = 0
-        for gp_details in user_details["grand_prix"].values():
-            total_points += int(gp_details["gp_total_points"])
-        users_db[user_id]["total_points"] = total_points
-    """
-    if users_db:
-        with open(f'{USERS_DB_PATH}', 'w') as f:
-            json.dump(users_db,f,indent=4)
-
-    # sum up the points
-    leader_board = {}
-    
-    for user_id,user_info in users_db.items():
-        leader_board[user_info["user_name"]] = user_info["total_points"]
-
-    leader_board = dict(sorted(leader_board.items(), key=lambda item: item[1], reverse=True))
-
-    logger.debug(f"{leader_board = }")
-    
-    sorted_scores = sorted(list(set(leader_board.values())), reverse=True)
-    
-    logger.debug(f"{sorted_scores = }")
-
-    descr = ""
-    enumarator = 0
-    for score in sorted_scores:
-        descr += f"{score} pts: "
-        for name, player_score in leader_board.items():
-            if score == player_score:
-                descr += f"{name} "
+    winners = []
+    for u_s in unique_scores:
+        descr += f"{u_s} pts: "
+        same_score_users = [key for key, val in scores.items() if val == u_s]
+        winners = same_score_users
+        for uname in same_score_users:
+            descr += f"{uname}  "
         descr += "\n"
-                
+    descr += f"\n**Congrats to {'  '.join(winners)}**\n"
+
+    
     logger.debug(f"{descr = }")
+    embed=discord.Embed(colour=0xFFFFFF,title=f"Season leaderboard",description=descr)
+    await ctx.followup.send(embed=embed)
+    try:
+        if local_dict:
+            with open(f'{USERS_DB_PATH}', 'w') as f:
+                json.dump(local_dict,f,indent=4)
+    except TypeError:
+        logger.debug("INT64 error")
 
 @bot.tree.command(name="force_fetch2",description="ADMIN - Fetch latest info right now")
 async def force_fetch(interaction:Interaction,password:str):    
@@ -507,7 +457,7 @@ async def generate_report(ctx:discord.Interaction):
     guess_db = f1_data.pd.DataFrame.from_dict(guess_database, orient='index')
     guess_db.reset_index(inplace=True)
     guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
-    guess_db_df = guess_db.iloc[::-1]
+    guess_db_df = guess_db.iloc[::-1] # reverse dataframe
     #logger.debug(f"{guess_db_df = }")
     
     # list of member's name
@@ -617,30 +567,56 @@ async def kozso(ctx:Interaction):
     kozso_lines = ["A delfinek.. a víz alatt.. nagyon jó emberek!","Az éérzéések, a szerelem, az ébredések, a kaják, a vizek, a min-mindent imádok, miindent pozitiven csak!"]
     await ctx.response.send_message(random.choice(kozso_lines),ephemeral=True)
 
-@bot.tree.command(name="lajos",description="-")
-async def lajos(ctx:Interaction, pia:str="palinka"):
-    await ctx.response.defer()
-    channel = bot.get_channel(get_channel_info("channel_id"))
-    logger.info("lajos már régen volt az neten bazdmeg")
-    script = f"""- Szia Lajos. 👋
--       Szia bazdmeg! Kutyáidat sétáltatod?
-- Hát bazdmeg
--                 Ilyen...ilyen szerelésbe?
-- Hát miér milyenbe?
--           Miért nem öltözöl föl rendesen?
-- Hát miér hát nem vagyok rendesen bazdmeg?
--                                Na jólvan.
-- Most vettem fel bazdmeg délután!
--             Ilyen... hát kár volt bazdmeg
-- Hát ja
--                            Na jólvan szia
-- Szia 👋 """
-    if pia == "palinka":
-        for line in script.split('\n'):
-            await channel.send(line,ephemeral=True)
-    elif pia == "vodka":
-        await channel.send("|| Húh, uauháuúháúáúháúu mi az apád faszát hoztál, te buzi? ||",ephemeral=True)
-    await ctx.followup.send("---",ephemeral=True)
+@bot.tree.command(name="ki_az_az_alekosz",description="mindjart megtudod")
+async def alekos(ctx:Interaction):
+    logger.info("alekosz kitálal")
+    script = f"""**NÉV:** Nagy Alekosz
+**ATTRIBUTUMOK:**
+Nemzetközi sztár
+Vagyonőr
+Taxisofőr
+Üzletember 
+Etikus hacker 
+Előadóművész
+Értelmiségi 
+Gróf 
+Korona herceg 
+Civil politikai elemző
+Testépítő 
+Író 
+BRFK által megfigyelt, lehallgatott, követett személy 
+Nemzetbiztonsági kockázat
+Tényező 
+Állandó stratégiai gócpont
+A Karinthy gyűrű várományosa
+Istencsapás
+Csendestárs
+Donor
+Fajvédelmi operatív 
+Békaember
+Régi új fideszes  
+Macséte 
+Kozmológus
+Kriminológus 
+Túravezető 
+Gurmé 
+Munkásőr
+Férfi szex szimbólum 
+Világbajnok
+Tavi finánc 
+Direktor 
+Kényszerszexuális
+Klíma tulajdonos 
+Színész 
+A magyar csillag
+Kolosszus 
+Privát rendszám tulajdonos  
+Seuso-kincs tulajdonos"""
+
+    embed=discord.Embed(title="Nagy Alekosz",
+                        description=script,
+                        color=0xFF5733)
+    await ctx.response.send_message(embed=embed,ephemeral=True)
 
 ### UNSTABLE
 """

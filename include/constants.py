@@ -64,11 +64,12 @@ LONG_DATE_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 #todo add _HEADER to variable names
 
 CATEGORY =      "category" # grand prix guess categories
-DRIVER =        "driver" # driver / dnf value
+DRIVER_NAME =   "driver_name" # driver / dnf value
 USERNAME =      "user_name" # user name
 USER_ID =       "user_id" # user id
 RESULT =        "result" # result of grand prix category
 GP_ID =         "gp_id" # id of grand prix
-GP_NAME =       "name"
+GP_NAME =       "gp_name"
 GUESS =         "guess" # the guess value
 SCORE =         "score" # the score for the category
+TIME_STAMP =    "time_stamp" # timestamp, long format

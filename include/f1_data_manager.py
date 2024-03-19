@@ -194,7 +194,7 @@ class F1DataFetcher:
                 # either have template locally, or load in from json file
                 self.all_prev_gp_details[gp_id] = {
                     "url": "",
-                    "name": "",
+                    GP_NAME: "",
                     "sessions": {
                         "practice-1": False,
                         "practice-2": False,
@@ -204,7 +204,7 @@ class F1DataFetcher:
                         "qualifying": False,
                         "race": False
                     },
-                    "results": {
+                    RESULT: {
                         "FP1": "",
                         "FP2": "",
                         "FP3": "",
@@ -241,7 +241,7 @@ class F1DataFetcher:
             result_link = all_prev_gp_data_soap.find('a', class_="btn btn--default d-block d-md-inline-block")
             gp_url = result_link['href']
             domain_url = '/'.join(gp_url.split("/")[:-1])
-            self.all_prev_gp_details[gp_id]["name"] = gp_url.split("/")[-2]
+            self.all_prev_gp_details[gp_id][GP_NAME] = gp_url.split("/")[-2]
 
             # fetch all info
             for category,postfix in url_library.items():
@@ -251,15 +251,21 @@ class F1DataFetcher:
             
             for session,has_been in self.all_prev_gp_details[gp_id]["sessions"].items():
                 if has_been:
-                    if session == "practice-1": self.all_prev_gp_details[gp_id]["results"]["FP1"] = self.fetch_fpn_results(domain_url+url_library[session])
-                    if session == "practice-2": self.all_prev_gp_details[gp_id]["results"]["FP2"] = self.fetch_fpn_results(domain_url+url_library[session])
-                    if session == "practice-3": self.all_prev_gp_details[gp_id]["results"]["FP3"] = self.fetch_fpn_results(domain_url+url_library[session])
-                    if session == "sprint": self.all_prev_gp_details[gp_id]["results"]["S"] = self.fetch_sprint_race_results(domain_url+url_library[session])
-                    if session == "sprint-shootout": self.all_prev_gp_details[gp_id]["results"]["SO"] = self.fetch_sprint_shootout_results(domain_url+url_library[session])
-                    if session == "qualifying": self.all_prev_gp_details[gp_id]["results"].update(self.fetch_qual_results(domain_url+url_library[session]))
-                    if session == "race": self.all_prev_gp_details[gp_id]["results"].update(self.fetch_race_results(domain_url+url_library[session]))
-            self.all_prev_gp_details[gp_id]["results"]["DOTD"] = self.fetch_dotd_results(url_library["driver-of-the-day"])
-            self.all_prev_gp_details[gp_id]["results"]["R_FAST"] = self.fetch_fastest_results(url_library["fastest-lap-on-race"])
+                    if session == "practice-1": self.all_prev_gp_details[gp_id][RESULT]["FP1"] = self.fetch_fpn_results(domain_url+url_library[session])
+                    if session == "practice-2": self.all_prev_gp_details[gp_id][RESULT]["FP2"] = self.fetch_fpn_results(domain_url+url_library[session])
+                    if session == "practice-3": self.all_prev_gp_details[gp_id][RESULT]["FP3"] = self.fetch_fpn_results(domain_url+url_library[session])
+                    if session == "sprint": self.all_prev_gp_details[gp_id][RESULT]["S"] = self.fetch_sprint_race_results(domain_url+url_library[session])
+                    if session == "sprint-shootout": self.all_prev_gp_details[gp_id][RESULT]["SO"] = self.fetch_sprint_shootout_results(domain_url+url_library[session])
+                    if session == "qualifying": self.all_prev_gp_details[gp_id][RESULT].update(self.fetch_qual_results(domain_url+url_library[session]))
+                    if session == "race": self.all_prev_gp_details[gp_id][RESULT].update(self.fetch_race_results(domain_url+url_library[session]))
+            # find out serial number of grand prix
+            # since first element of DOTD response is a header text,
+            #                                                               |
+            #  starting from 1 is reasonable                       see here V
+            gp_ser_nums = {gp_id:len(self.all_prev_gp_details.keys()) - ser_num for ser_num,gp_id in enumerate(self.all_prev_gp_details.keys())}
+            #logger.debug(f"{gp_ser_nums = }")
+            self.all_prev_gp_details[gp_id][RESULT]["DOTD"] = self.fetch_dotd_results(url_library["driver-of-the-day"],gp_ser_nums[gp_id])
+            self.all_prev_gp_details[gp_id][RESULT]["R_FAST"] = self.fetch_fastest_results(url_library["fastest-lap-on-race"])
     
 
     def fetch_next_gp_details(self) -> None:
@@ -547,16 +553,15 @@ class F1DataFetcher:
         #self.prev_gp_details["results"]["SO"] = 
         return prev_shootout_table_df.loc[0]['Driver']
 
-    def fetch_dotd_results(self,url,serial_number=0):
+    def fetch_dotd_results(self,url,serial_number):
         # driver of the day
         logger.info("Fetching previous driver of the day results")
         prev_dotd_soap = self._request_and_get_soap(url)
         prev_dotd_text = prev_dotd_soap.find_all('strong')
         prev_dotd_text_clean = [name.get_text().strip() for name in prev_dotd_text]
-        logger.debug(f"{prev_dotd_text_clean = }")
-        prev_dotd_list = prev_dotd_text_clean[1]#latest
+        prev_dotd_list = prev_dotd_text_clean[serial_number]
         dotd = prev_dotd_list.split("\n")[0]
-        #self.prev_gp_details["results"]["DOTD"] = 
+        #logger.debug(f"{serial_number}: {dotd = }")
         return dotd.split("-")[0].strip()
 
     def fetch_fastest_results(self,url):
@@ -613,7 +618,7 @@ class F1DataFetcher:
     
     def get_all_results(self):
         logger.info("Sending all previous sessions results")
-        return self.all_prev_gp_details[self.get_prev_gp_id()]["results"]
+        return self.all_prev_gp_details[self.get_prev_gp_id()][RESULT]
     
     def get_all_prev_gps_details(self):
         return self.all_prev_gp_details
@@ -626,7 +631,7 @@ class F1DataFetcher:
     
     def get_prev_gp_name(self):
         logger.info("Sending previous grand prix name")
-        gp_name = self.all_prev_gp_details[self.get_prev_gp_id()]["name"]
+        gp_name = self.all_prev_gp_details[self.get_prev_gp_id()][GP_NAME]
         gp_name = gp_name.capitalize().replace('-', ' ')
         return gp_name
     
