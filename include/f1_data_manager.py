@@ -635,6 +635,11 @@ class F1DataFetcher:
         gp_name = gp_name.capitalize().replace('-', ' ')
         return gp_name
     
+    def get_all_prev_gp_id(self) -> list:
+        logger.info("Sending previous grand prix id")
+        sorted_gp_ids = sorted(list(self.all_prev_gp_details.keys()))
+        return sorted_gp_ids
+    
     #* next gp
     def get_next_gp_id(self):
         logger.info("Sending next grand prix id")
