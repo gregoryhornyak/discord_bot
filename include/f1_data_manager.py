@@ -601,7 +601,7 @@ class F1DataFetcher:
         logger.info("Fetching all next grand prix categories details")
         return_list = []
         if "sprint" in self.next_gp_details["sessions"].keys():
-            return_list = ["FP1","SO","S","Q1","Q2","Q3","Q_BOTR","R1","R2","R3","R_BOTR","DOTD","R_FAST","R_DNF"] # refine it into a for loop
+            return_list = ["FP1", "SO","S",  "Q1","Q2","Q3","Q_BOTR","R1","R2","R3","R_BOTR","DOTD","R_FAST","R_DNF"] # refine it into a for loop
         else:
             return_list = ["FP1","FP2","FP3","Q1","Q2","Q3","Q_BOTR","R1","R2","R3","R_BOTR","DOTD","R_FAST","R_DNF"] 
         self.next_gp_categories = return_list

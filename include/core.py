@@ -269,10 +269,9 @@ def get_complete_database() -> f1_data.pd.DataFrame:
     name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER_NAME] != name_guess_result_point_df[RESULT], SCORE] = 0
     return name_guess_result_point_df
 
-@bot.tree.command(name="evaluate",description="-")
+@bot.tree.command(name="evaluate",description="show seasonal leaderboard")
 async def eval(ctx:discord.Interaction):
-    """read the results, and compare them with the guesses
-    could only happen after the race"""
+    """read the results, and compare them with the guesses"""
 
     # need some time
     await ctx.response.defer()
@@ -324,7 +323,7 @@ async def eval(ctx:discord.Interaction):
     scores = {user_info[USERNAME]:user_info["session_score"] for user_info in local_dict.values()}
     unique_scores = {value for value in scores.values()}
     
-    descr = ""
+    descr = "(*including podium-point*)\n\n"
     winners = []
     for u_s in unique_scores:
         descr += f"{u_s} pts: "
