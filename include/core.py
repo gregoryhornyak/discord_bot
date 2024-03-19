@@ -288,7 +288,8 @@ async def eval(ctx:discord.Interaction):
     # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
     #
     
-    complete_df = get_complete_database(ctx)
+    complete_df = get_complete_database()
+    complete_df = complete_df[complete_df[GP_ID].isin(f1_module.get_all_prev_gp_id())]
     participants = get_discord_members(ctx)
     
     #todo convert this dictionary-transform into a dataframe -> dict using built-in Pandas methods
