@@ -222,24 +222,7 @@ async def guess(ctx:discord.Interaction): #include DNF
     await ctx.followup.send(content=message, view=theView)
     #await ctx.edit_original_response()
 
-@bot.tree.command(name="evaluate2",description="-")
-async def eval(ctx:discord.Interaction):
-    """read the results, and compare them with the guesses
-    could only happen after the race"""
-
-    # need some time
-    await ctx.response.defer()
-
-    # EVALUATING
-
-    # 1. find all the users who guessed (if didnt, out of game)
-    # 2. if more guesses under same category then latest matters.
-    # 3. if didnt guess in a category then doesn't get points
-    # 4. assign score board value
-
-    #
-    # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
-    #
+def get_complete_database(ctx) -> f1_data.pd.DataFrame:
     
     # SCORE-TABLE 
     score_board = {}
@@ -287,7 +270,30 @@ async def eval(ctx:discord.Interaction):
     name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on=CATEGORY, how='left')
     # take away points if wrong guess
     name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER_NAME] != name_guess_result_point_df[RESULT], SCORE] = 0
-    complete_df = name_guess_result_point_df
+    return name_guess_result_point_df
+
+@bot.tree.command(name="evaluate2",description="-")
+async def eval(ctx:discord.Interaction):
+    """read the results, and compare them with the guesses
+    could only happen after the race"""
+
+    # need some time
+    await ctx.response.defer()
+
+    # EVALUATING
+
+    # 1. find all the users who guessed (if didnt, out of game)
+    # 2. if more guesses under same category then latest matters.
+    # 3. if didnt guess in a category then doesn't get points
+    # 4. assign score board value
+
+    #
+    # IMPORTANT: DNF IS STRING USING DRIVER_NAME KEY -> too much fuss in the for cycle
+    #
+    
+    complete_df = get_complete_database(ctx)
+    participants = get_discord_members(ctx)
+    
     #todo convert this dictionary-transform into a dataframe -> dict using built-in Pandas methods
     local_dict = {}
     for user_id in complete_df[USER_ID].unique():
@@ -434,61 +440,11 @@ async def myguess(ctx:discord.Interaction,username:str=""):
 async def generate_report(ctx:discord.Interaction):
 #async def generate_report(ctx:discord.Interaction,gp:typing.Literal["Bahrain","Saudi Arabia"]="Saudi Arabia",uname:typing.Literal["user01","user02","user03"]="current_user"):
     """name | guess | result | point"""
-    # previous GP ID
-    prev_gp_id = f1_module.get_prev_gp_id()
-    # previous GP Name
-    prev_gp_name = f1_module.get_prev_gp_name()
-    # SCORE-TABLE 
-    score_board = {}
-    try:
-        with open(f'{SCORE_TABLE_PATH}', 'r') as f:
-            score_board = json.load(f)
-    except Exception as e:
-        logger.error(e)
-    score_board_df = f1_data.pd.DataFrame.from_dict(score_board, orient='index')
-    score_board_df.reset_index(inplace=True)
-    score_board_df.rename(columns={'index': 'category'}, inplace=True)
-    score_board_df.rename(columns={0: 'point'}, inplace=True)
-        
-    # users info database
-    guess_database = {}
-    with open(f"{GUESS_DB_PATH}", "r") as f:
-        guess_database = json.load(f)
-    guess_db = f1_data.pd.DataFrame.from_dict(guess_database, orient='index')
-    guess_db.reset_index(inplace=True)
-    guess_db.rename(columns={'index': 'time_stamp'}, inplace=True)
-    guess_db_df = guess_db.iloc[::-1] # reverse dataframe
-    #logger.debug(f"{guess_db_df = }")
-    
-    # list of member's name
-    participants = get_discord_members(ctx)
-    
-    # dict of previous GP results
-    results = f1_module.get_all_results()
-    results_df = f1_data.pd.DataFrame.from_dict(results, orient='index')
-    results_df.reset_index(inplace=True)
-    results_df.rename(columns={'index': 'category'}, inplace=True)
-    results_df.rename(columns={0: 'result'}, inplace=True)
-    
-    
-    name_guess_result_df = f1_data.pd.DataFrame.merge(guess_db_df, results_df, on='category', how='left')
-    name_guess_result_df = name_guess_result_df.drop(columns=['time_stamp','user_id'])
-    name_guess_result_point_df = f1_data.pd.DataFrame.merge(name_guess_result_df, score_board_df, on='category', how='left')
-    
-    name_guess_result_point_df.loc[name_guess_result_point_df['driver_name'] != name_guess_result_point_df['result'], 'point'] = 0  
-    
-    name_guess_result_point_df = name_guess_result_point_df.sort_values(by='user_name')
-    
-    name_guess_result_point_df = name_guess_result_point_df[name_guess_result_point_df['gp_id'] == prev_gp_id]
-    name_guess_result_point_df.reset_index(inplace=True)
-    name_guess_result_point_df = name_guess_result_point_df.drop(columns=['index'])
-    name_guess_result_point_df.rename(columns={'driver_name': 'guess'}, inplace=True)
-    
-    name_guess_result_point_df = name_guess_result_point_df.groupby('user_name').apply(lambda x: x.drop_duplicates('category')).reset_index(drop=True)
-    
+
+    complete_df = get_complete_database(ctx)    
 
     with open(f"{REPORT_PATH}",'w') as f:
-        f.write(name_guess_result_point_df.to_markdown())
+        f.write(complete_df.to_markdown())
     
     #! TEST if multiple users create histories, and all files have the same name -> conflict or time delay is enough
 
