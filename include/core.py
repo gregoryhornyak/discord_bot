@@ -346,16 +346,16 @@ async def eval(ctx:discord.Interaction):
         logger.debug("INT64 error")
 
 @bot.tree.command(name="force_fetch",description="ADMIN - Fetch latest info right now")
-async def force_fetch(interaction:Interaction,password:str):    
+async def force_fetch(ctx:discord.Interaction,password:str):    
     with open(f"{PASSW_PATH}",'r') as f:
         found_pw = f.read().strip()
         logger.info(f"{password}!={found_pw} is {password!=found_pw}")
         if password!=found_pw:
-            await interaction.response.send_message("Wrong password")
+            await ctx.response.send_message("Wrong password")
             return 0
     f1_module.fetch_menu(forced=True)
     logger.info("F1 modules fetched up-to-date info")
-    await interaction.response.send_message("Force fetching completed",ephemeral=True)
+    await ctx.response.send_message("Force fetching completed",ephemeral=True)
 
 #--------< Additional Functions >----#
 
