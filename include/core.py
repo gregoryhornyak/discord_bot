@@ -441,7 +441,8 @@ async def generate_report(ctx:discord.Interaction):
 #async def generate_report(ctx:discord.Interaction,gp:typing.Literal["Bahrain","Saudi Arabia"]="Saudi Arabia",uname:typing.Literal["user01","user02","user03"]="current_user"):
     """name | guess | result | point"""
 
-    complete_df = get_complete_database(ctx)    
+    complete_df:f1_data.pd.DataFrame = get_complete_database(ctx)    
+    complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID,GUESS])
 
     with open(f"{REPORT_PATH}",'w') as f:
         f.write(complete_df.to_markdown())
