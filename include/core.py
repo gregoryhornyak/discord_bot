@@ -443,6 +443,7 @@ async def generate_report(ctx:discord.Interaction):
     except Exception as e:
         logger.error(e)
     complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID])
+    complete_df = complete_df[[USERNAME, GP_NAME, CATEGORY, DRIVER_NAME, RESULT, SCORE]]
     
     with open(f"{REPORT_PATH}",'w') as f:
         f.write(complete_df.to_markdown(index=False))
