@@ -442,7 +442,7 @@ async def generate_report(ctx:discord.Interaction):
         complete_df = complete_df[complete_df[USER_ID] == str(ctx.user.id)]
     except Exception as e:
         logger.error(e)
-    complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID,DRIVER_NAME])
+    complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID])
     
     with open(f"{REPORT_PATH}",'w') as f:
         f.write(complete_df.to_markdown(index=False))
