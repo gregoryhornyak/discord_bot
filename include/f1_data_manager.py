@@ -377,6 +377,7 @@ class F1DataFetcher:
                 converted_end_time = self.datetime_converter(event_end_date[0],event_time_offset[0])
                 datetime_obj = datetime.datetime.strftime(converted_end_time,LONG_DATE_FORMAT)
                 self.grand_prix_calendar[str(event_id)]["end_date"] = datetime_obj
+                logger.debug(f"NOW: {datetime.datetime.now()}  -  END_DATE: {datetime.datetime.strptime(datetime_obj,LONG_DATE_FORMAT)}")
                 if datetime.datetime.now() > datetime.datetime.strptime(datetime_obj,LONG_DATE_FORMAT):
                     self.grand_prix_calendar[str(event_id)]["completed"] = True
                                       

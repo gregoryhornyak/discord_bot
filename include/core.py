@@ -6,7 +6,7 @@ import typing
 import asyncio
 import subprocess
 import calendar
-from PIL import Image, ImageFont, ImageDraw
+#from PIL import Image, ImageFont, ImageDraw
 import random
 
 import discord
@@ -52,8 +52,6 @@ async def on_ready():
 
     await bot.change_presence(activity=discord.Game(name=f"in {BOT_STATE} mode"))
 
-    #await channel.last_message.edit(content=BOT_START_SHORT_MESSAGE)
-
     # start agents
     await notification_agent()
     #await guess_agent()
@@ -85,7 +83,6 @@ async def notification_agent():
         delta = now.replace(second=0, microsecond=0) + datetime.timedelta(days = 1)
         delta_3_days = now.replace(second=0, microsecond=0) + datetime.timedelta(days = 3)
         for r_t, time in next_grand_prix_events_time.items():
-            # 2024-02-29 11:30:00.000000
             if time.month == delta.month and time.day == delta.day and time.hour == delta.hour and time.minute == delta.minute:
                 await channel.send(f"{r_t} starts in 1 day!") # seems oke
             # for 2,1 hours and over, time has been shifted 1 hour earlier due to time issues
@@ -98,7 +95,7 @@ async def notification_agent():
                     await channel.send(f"{channel.guild.default_role} {r_t} starts in **1 hour**! Take your guesses!")
                     
             if now.month == time.month and now.day == time.day and now.hour == time.hour-1 and now.minute == time.minute:
-                await channel.send(f"{channel.guild.default_role} Guessing phase is over for {r_t}!")
+                await channel.send(f"{channel.guild.default_role} {r_t} has started!")
 
         loop_counter += 1
         await asyncio.sleep(ALERT_CHECK_DELAY)
@@ -130,6 +127,7 @@ def get_discord_members(ctx:Interaction): # dont change it
     user_info["69420"] = "csokker99"
     return user_info
 
+"""
 async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
     for member in ctx.guild.members:
         if member.name != "lord_maldonado":
@@ -137,12 +135,14 @@ async def save_discord_members_pics(ctx:Interaction) -> list: # dont change it
                 await member.avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
             except AttributeError:
                 await member.default_avatar.save(f"{PROFILE_PICS_PATH}{member.name}.png")
+"""
 
 @bot.tree.command(name="guess",description="Make a guess for a category and a driver")
 async def guess(ctx:discord.Interaction): #include DNF
     """Allows the user to make a guess"""
     await ctx.response.defer(ephemeral=True)
-
+    #log: time|user|command|success 
+    logger.info(f"{ctx.user.name} guess invoked")
     drivers_info = f1_module.get_drivers_details() #* could be cached
     next_race_id = f1_module.get_next_gp_id()
     next_race_name = f1_module.get_next_gp_name()
@@ -190,7 +190,7 @@ async def guess(ctx:discord.Interaction): #include DNF
             count = select_dnf.values[0]
             db_man.save_guess(name=name,id=id,select_race="R_DNF",select_driver=count,dnf=True,next_race_id=next_gp_id)
             await sub_interaction.response.send_message(f"<{name}: R_DNF: {select_dnf.values[0]}: {next_race_name.capitalize()}>",silent=True)
-
+            logger.info(f"{ctx.user.name} guess DNF successful")
     async def button_callback(sub_interaction:Interaction):
         name = sub_interaction.user.name
         id = sub_interaction.user.id
@@ -202,15 +202,13 @@ async def guess(ctx:discord.Interaction): #include DNF
         else:
             await sub_interaction.response.send_message(f"<{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}>",silent=True)
         
-        
-        #logger.info(f"{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}")
         db_man.save_guess(name=name,
                           id=id,
                           select_race=select_race.values[0],
                           select_driver=select_driver.values[0],
                           next_race_id=next_race_id) # dnf=False
+        logger.info(f"{ctx.user.name} guess DRIVER successful")
         # check if already guessed this
-        #await sub_interaction.response.send_message(f"Nothing happened",silent=True)
 
     select_driver.callback = driver_callback
     select_race.callback = race_callback
@@ -238,8 +236,11 @@ def get_complete_database() -> f1_data.pd.DataFrame:
         
     # guess database
     guess_database = {}
-    with open(f"{GUESS_DB_PATH}", "r") as f:
-        guess_database = json.load(f)
+    try:
+        with open(f"{GUESS_DB_PATH}", "r") as f:
+            guess_database = json.load(f)
+    except Exception as e:
+        logger.error(e)
     guess_db = f1_data.pd.DataFrame.from_dict(guess_database, orient='index')
     guess_db.reset_index(inplace=True)
     guess_db.rename(columns={'index': TIME_STAMP}, inplace=True)
@@ -272,7 +273,7 @@ def get_complete_database() -> f1_data.pd.DataFrame:
 @bot.tree.command(name="evaluate",description="show seasonal leaderboard")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses"""
-
+    logger.info(f"{ctx.user.name} evaluate invoked")
     # need some time
     await ctx.response.defer()
 
@@ -316,7 +317,6 @@ async def eval(ctx:discord.Interaction):
             local_dict[user_id]["session_score"] += local_dict[user_id]["grand_prix"][gp_id]["grand_prix_score"]
         local_dict[user_id]["session_score"] += local_dict[user_id]["grand_prix"][gp]["podium_score"]
 
-
     logger.info("Evaluation completed")
     
     # create leaderboard
@@ -334,10 +334,9 @@ async def eval(ctx:discord.Interaction):
         descr += "\n"
     descr += f"\n**Congrats to {'  '.join(winners)}**\n"
 
-    
-    logger.debug(f"{descr = }")
     embed=discord.Embed(colour=0xFFFFFF,title=f"Season leaderboard",description=descr)
     await ctx.followup.send(embed=embed)
+    logger.info(f"{ctx.user.name} evaluate successful")
     try:
         if local_dict:
             with open(f'{USERS_DB_PATH}', 'w') as f:
@@ -396,27 +395,26 @@ async def myguess(ctx:discord.Interaction,username:str=""):
             guesses_database = json.load(f)
     user_guesses = f1_data.pd.DataFrame.from_dict(guesses_database, orient='index')
     user_guesses.reset_index(inplace=True)
-    user_guesses.rename(columns={'index': 'time_stamp'}, inplace=True)
+    user_guesses.rename(columns={'index': TIME_STAMP}, inplace=True)
     user_guesses_reversed = user_guesses.iloc[::-1]
-    #user_name = ctx.user.name
     user_name = ""
     if username:
         user_name = username
     else:   
         user_name = ctx.user.name
         
-    cur_user = user_guesses_reversed[user_guesses_reversed['user_name'] == user_name]
+    cur_user = user_guesses_reversed[user_guesses_reversed[USERNAME] == user_name]
 
     race_name = f1_module.get_next_gp_name()
     next_race_id = f1_module.get_next_gp_id()
-    cur_user_unique = cur_user.drop_duplicates(subset=['category'])
-    cur_user_unique.set_index('category', inplace=True)
-    cur_user_unique = cur_user_unique.sort_values(by='category')
-    cur_user_unique = cur_user_unique[cur_user_unique['gp_id'] == next_race_id]
+    cur_user_unique = cur_user.drop_duplicates(subset=[CATEGORY])
+    cur_user_unique.set_index(CATEGORY, inplace=True)
+    cur_user_unique = cur_user_unique.sort_values(by=CATEGORY)
+    cur_user_unique = cur_user_unique[cur_user_unique[GP_ID] == next_race_id]
     
     with open(f"{USER_GUESS_HISTORY_PATH}",'w') as f:
         f.write(f"### {'&nbsp;'*11} {user_name}'s guesses for {race_name} {datetime.datetime.now().year}\n")
-        f.write(cur_user_unique['driver_name'].to_markdown())
+        f.write(cur_user_unique[DRIVER_NAME].to_markdown())
     
     #! TEST if multiple users create histories, and all files have the same name -> conflict or time delay is enough
 
@@ -436,7 +434,7 @@ async def myguess(ctx:discord.Interaction,username:str=""):
 @bot.tree.command(name="generate_report",description="Complete report on results")
 async def generate_report(ctx:discord.Interaction):
     """name | guess | result | point"""
-
+    logger.info(f"{ctx.user.name} generate report invoked")
     complete_df= get_complete_database()
     logger.debug(f"{ctx.user.id = }")
     logger.debug(f"{complete_df[complete_df[USER_ID] == str(ctx.user.id)] = }")
@@ -456,6 +454,7 @@ async def generate_report(ctx:discord.Interaction):
     os.system(cmd)
     logger.info("markdown to pdf")
     await ctx.response.send_message(file=discord.File(f"{REPORT_PDF_PATH}.pdf"),ephemeral=True)
+    logger.info(f"{ctx.user.name} generate report successful")
     
 #--------< Funny Functions aka Easter Eggs >----#
 
@@ -473,16 +472,16 @@ async def whoami(ctx:Interaction):
 @bot.tree.command(name="info",description="-")
 async def info(ctx:Interaction):
     # export this dict compr to F1_module as func
-    next_event_details = {r_t: datetime.datetime.strptime(time,LONG_DATE_FORMAT) for r_t,time in f1_module.next_gp_details["sessions"].items()}
+    next_event_details = {race_time: datetime.datetime.strptime(time,LONG_DATE_FORMAT) for race_time,time in f1_module.next_gp_details["sessions"].items()}
     descr=""
     disp_minute = ""
     
-    for r_t,time in next_event_details.items():
+    for race_time,time in next_event_details.items():
         if time.minute < 10:
             disp_minute = str(time.minute)+"0"
         else:
             disp_minute = str(time.minute)
-        descr += f"{time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{disp_minute} - {r_t}\n"
+        descr += f"{time.day} {calendar.month_abbr[int(time.month)]}, {time.hour}:{disp_minute} - {race_time}\n"
     descr+=f"\nLOCAL TIME: {datetime.datetime.now()}\n"
     location = f1_module.get_next_gp_name()
     embed=discord.Embed(colour=0xFFFFFF,title=f"Race Information\n{location}",description=descr)
