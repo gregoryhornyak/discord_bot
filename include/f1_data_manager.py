@@ -102,7 +102,7 @@ class F1DataFetcher:
             start_fetch = True
         logger.info(f"Daily fetch needed: {start_fetch}")
         if start_fetch:
-            self.check_grand_prix_calendar()
+            self.fetch_grand_prix_calendar()
             self.fetch_all_prev_gp_details()
             
             self.fetch_next_gp_details()
@@ -186,6 +186,8 @@ class F1DataFetcher:
         logger.info("Loading all grand prix calendar")
         with open(f"{YEAR_SCHEDULE_PATH}","r") as f:    
             self.grand_prix_calendar = json.load(f)
+
+
 
     def fetch_all_prev_gp_details(self):
         # requirements: grand_prix_calendar,
@@ -321,19 +323,6 @@ class F1DataFetcher:
         #* next_event_details.json is loaded to replace true times | uncomment it for normal mode
         next_grand_prix_events = grand_prix_schedule[str(race_id)]
         self.next_gp_details["sessions"] = next_grand_prix_events
-
-
-    def check_grand_prix_calendar(self) -> bool: # TODO break it into two func: 1. checks 2. gets urls
-        try:
-            with open(f"{YEAR_SCHEDULE_PATH}","r") as f:
-                logger.debug(f"loading in calendar")
-                self.grand_prix_calendar = json.load(f)
-        except FileNotFoundError:
-            logger.debug("Creating year-gp-schedule json")
-            self.fetch_grand_prix_calendar()
-            return False
-        else:
-            return True
         
     def fetch_grand_prix_calendar(self):
         logger.info("Fetching whole year grand prix URLs")
