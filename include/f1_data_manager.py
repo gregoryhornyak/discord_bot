@@ -7,6 +7,8 @@ from include.logging_manager import logger
 from include.constants import *
 from include.database_manager import datetime
 
+#TODO fix triple fetching
+
 class F1DataFetcher:
 
     #* Includes:

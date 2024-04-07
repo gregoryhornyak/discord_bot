@@ -325,14 +325,22 @@ async def eval(ctx:discord.Interaction):
     
     descr = "(*including podium-point*)\n\n"
     winners = []
+    leaderboard_lines = [] # in order to sort by score, create a string list, then "sorted()" by score
     for u_s in unique_scores:
-        descr += f"{u_s} pts: "
+        descr_temp = ""
+        descr_temp += f"{u_s} pts: "
         same_score_users = [key for key, val in scores.items() if val == u_s]
-        winners = same_score_users
         for uname in same_score_users:
-            descr += f"{uname}  "
-        descr += "\n"
-    descr += f"\n**Congrats to {'  '.join(winners)}**\n"
+            descr_temp += f"{uname}  "
+        descr_temp += "\n"  
+        leaderboard_lines.append(descr_temp)
+    logger.info(f"{sorted(leaderboard_lines)}")
+    for line in sorted(leaderboard_lines):
+        descr += line
+        winners = line.split("pts: ")[1].split(" \n")[0]
+    #descr += f"\n**Congrats to {'  '.join(winners)}**\n"
+    descr += f"\n**Congrats to {winners}**\n"
+    logger.info(f"winners: {winners}")
 
     embed=discord.Embed(colour=0xFFFFFF,title=f"Season leaderboard",description=descr)
     await ctx.followup.send(embed=embed)
