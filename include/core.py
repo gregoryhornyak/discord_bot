@@ -270,7 +270,7 @@ def get_complete_database() -> f1_data.pd.DataFrame:
     name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER_NAME] != name_guess_result_point_df[RESULT], SCORE] = 0
     return name_guess_result_point_df
 
-@bot.tree.command(name="evaluate2",description="show seasonal leaderboard")
+@bot.tree.command(name="evaluate",description="show seasonal leaderboard")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses"""
     logger.info(f"{ctx.user.name} evaluate invoked")
