@@ -270,7 +270,7 @@ def get_complete_database() -> f1_data.pd.DataFrame:
     name_guess_result_point_df.loc[name_guess_result_point_df[DRIVER_NAME] != name_guess_result_point_df[RESULT], SCORE] = 0
     return name_guess_result_point_df
 
-@bot.tree.command(name="evaluate",description="show seasonal leaderboard")
+@bot.tree.command(name="evaluate2",description="show seasonal leaderboard")
 async def eval(ctx:discord.Interaction):
     """read the results, and compare them with the guesses"""
     logger.info(f"{ctx.user.name} evaluate invoked")
@@ -335,11 +335,11 @@ async def eval(ctx:discord.Interaction):
         descr_temp += "\n"  
         leaderboard_lines.append(descr_temp)
     logger.info(f"{sorted(leaderboard_lines)}")
-    for line in sorted(leaderboard_lines):
+    leader_board_sorted = sorted(leaderboard_lines,reverse=True)
+    winners = leader_board_sorted[0].split("pts: ")[1].split(" \n")[0]
+    descr += f"**Congrats to {winners}**\n\n"
+    for line in leader_board_sorted:
         descr += line
-        winners = line.split("pts: ")[1].split(" \n")[0]
-    #descr += f"\n**Congrats to {'  '.join(winners)}**\n"
-    descr += f"\n**Congrats to {winners}**\n"
     logger.info(f"winners: {winners}")
 
     embed=discord.Embed(colour=0xFFFFFF,title=f"Season leaderboard",description=descr)
