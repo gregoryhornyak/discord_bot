@@ -76,7 +76,7 @@ async def notification_agent():
 
         # do daily fetch
         if now.hour == 4 and now.minute == 20:
-            f1_module.daily_fetch()
+            f1_module.fetch_menu()
             pass
 
         next_grand_prix_events_time = {category: datetime.datetime.strptime(time,LONG_DATE_FORMAT) for category,time in f1_module.next_gp_details["sessions"].items()}  
@@ -315,7 +315,7 @@ async def eval(ctx:discord.Interaction):
                 logger.info(f"{user_id} - no podium")
         for gp_id in local_dict[user_id]["grand_prix"].keys():
             local_dict[user_id]["session_score"] += local_dict[user_id]["grand_prix"][gp_id]["grand_prix_score"]
-        local_dict[user_id]["session_score"] += local_dict[user_id]["grand_prix"][gp]["podium_score"]
+            local_dict[user_id]["session_score"] += local_dict[user_id]["grand_prix"][gp_id]["podium_score"]
 
     logger.info("Evaluation completed")
     
@@ -465,6 +465,39 @@ async def generate_report(ctx:discord.Interaction):
     await ctx.response.send_message(file=discord.File(f"{REPORT_PDF_PATH}.pdf"),ephemeral=True)
     logger.info(f"{ctx.user.name} generate report successful")
     
+@bot.tree.command(name="admin_generate_report",description="Complete report on results on anyone")
+async def admin_generate_report(ctx:discord.Interaction,password:str,user_id:str):
+    """name | guess | result | point"""
+    with open(f"{PASSW_PATH}",'r') as f:
+        found_pw = f.read().strip()
+        logger.info(f"{password}!={found_pw} is {password!=found_pw}")
+        if password!=found_pw:
+            await ctx.response.send_message("Wrong password")
+            return 0
+    logger.info(f"{ctx.user.name} generate report for {user_id} invoked")
+    complete_df= get_complete_database()
+    logger.debug(f"{user_id = }")
+    logger.debug(f"{complete_df[complete_df[USER_ID] == str(user_id)] = }")
+    try:
+        complete_df = complete_df[complete_df[USER_ID] == str(user_id)]
+    except Exception as e:
+        logger.error(e)
+    complete_df = complete_df.drop(columns=[TIME_STAMP,USER_ID,GP_ID])
+    complete_df = complete_df[[USERNAME, GP_NAME, CATEGORY, DRIVER_NAME, RESULT, SCORE]]
+    
+    with open(f"{REPORT_PATH}",'w') as f:
+        f.write(complete_df.to_markdown(index=False))
+    
+    #! TEST if multiple users create histories, and all files have the same name -> conflict or time delay is enough
+
+    cmd = f'pandoc {REPORT_PATH} -o {REPORT_PDF_PATH}_{user_id}.pdf'
+    
+    os.system(cmd)
+    logger.info("markdown to pdf")
+    await ctx.response.send_message(file=discord.File(f"{REPORT_PDF_PATH}_{user_id}.pdf"),ephemeral=True)
+    logger.info(f"{ctx.user.name} generate report successful")
+    
+
 #--------< Funny Functions aka Easter Eggs >----#
 
 @bot.tree.command(name="dadjoke",description="-")
