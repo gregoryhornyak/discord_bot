@@ -577,14 +577,15 @@ class F1DataFetcher:
         logger.info("Fetching all next grand prix drivers info")
         # for guess selection
         drivers_soap = self._request_and_get_soap(self.formula_one_urls["driver_details_url"])
-        surnames = drivers_soap.find_all('span', class_="d-block f1-bold--s f1-color--carbonBlack")
-        firstnames = drivers_soap.find_all('span', class_="d-block f1--xxs f1-color--carbonBlack")
-        carnames = drivers_soap.find_all('p', class_="listing-item--team f1--xxs f1-color--gray5")
+        surnames = drivers_soap.find_all('p', class_="f1-heading tracking-normal text-fs-18px leading-tight uppercase font-bold non-italic f1-heading__body font-formulaOne")#"d-block f1-bold--s f1-color--carbonBlack")
+        firstnames = drivers_soap.find_all('p', class_="f1-heading tracking-normal text-fs-12px leading-tight uppercase font-normal non-italic f1-heading__body font-formulaOne")#"d-block f1--xxs f1-color--carbonBlack")
+        carnames = drivers_soap.find_all('p', class_="f1-heading tracking-normal text-fs-12px leading-tight normal-case font-normal non-italic f1-heading__body font-formulaOne text-greyDark")#"listing-item--team f1--xxs f1-color--gray5")
         drivers_surnames = [name.get_text() for name in surnames]
         drivers_firstnames = [name.get_text() for name in firstnames]
         cars = [name.get_text() for name in carnames]
         drivers_fullname = [fname+" "+sname for fname, sname in zip(drivers_firstnames,drivers_surnames)]
         drivers_info = {key: value for key, value in zip(drivers_fullname,cars)}
+        logger.info(f"DRIVERS INFO: {drivers_info}")
         self.next_gp_drivers_info = drivers_info
 
     def fetch_categories(self) -> list:
