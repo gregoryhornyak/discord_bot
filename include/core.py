@@ -144,13 +144,10 @@ async def guess(ctx:discord.Interaction): #include DNF
     #log: time|user|command|success 
     logger.info(f"{ctx.user.name} guess invoked")
     drivers_info = f1_module.get_drivers_details() #* could be cached
-    next_race_id = f1_module.get_next_gp_id()
     next_race_name = f1_module.get_next_gp_name()
+    next_race_id = f1_module.next_gp_details['id']
     categories_list = f1_module.get_categories()
 
-    select_gp_name = discord.ui.Select(placeholder="Choose GrandPrix",
-                                       options=[discord.SelectOption(
-                                           label=gp_name, description=gp_date) for gp_name, gp_date in {"1234":"Miami","1235":"Italy"}.items()])
     select_race = discord.ui.Select(placeholder="Choose a category!",
                                     options=[discord.SelectOption(
                                         label=category, description=None) for category in categories_list if category!="R_DNF"])
@@ -163,7 +160,6 @@ async def guess(ctx:discord.Interaction): #include DNF
     press_button = discord.ui.Button(label="SUBMIT",style=discord.ButtonStyle.primary)
     press_dnf_button = discord.ui.Button(label="SUBMIT DNF",style=discord.ButtonStyle.secondary)
     theView = discord.ui.View()
-    theView.add_item(select_gp_name)
     theView.add_item(select_race)
     theView.add_item(select_driver)
     theView.add_item(select_dnf)
@@ -183,28 +179,24 @@ async def guess(ctx:discord.Interaction): #include DNF
     async def dnf_button_callback(sub_interaction:Interaction):
         name = sub_interaction.user.name
         id = sub_interaction.user.id
-        gp_id = select_gp_name.values[0]
-        next_race_name = {"1234":"Miami","1235":"Italy"}[gp_id]
         try:
             logger.info(f"{name}: {select_dnf.values[0]}: {next_race_name.capitalize()}")
         except (IndexError, NameError, AttributeError) as e:
             logger.error("No DNF selected")
         else:
-            next_gp_id = f1_module.next_gp_details['id']
+            
             count = select_dnf.values[0]
             db_man.save_guess(name=name,
                               id=id,
                               select_race="R_DNF",
                               select_driver=count,dnf=True,
-                              next_race_id=gp_id)
+                              next_race_id=next_race_id)
             await sub_interaction.response.send_message(f"<{name}: R_DNF: {select_dnf.values[0]}: {next_race_name.capitalize()}>",silent=True)
             logger.info(f"{ctx.user.name} guess DNF successful")
 
     async def button_callback(sub_interaction:Interaction):
         name = sub_interaction.user.name
         id = sub_interaction.user.id
-        gp_id = select_gp_name.values[0]
-        next_race_name = {"1234":"Miami","1235":"Italy"}[gp_id]
         try:
             logger.info(f"{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}")
         except (IndexError, NameError, AttributeError) as e:
@@ -214,19 +206,18 @@ async def guess(ctx:discord.Interaction): #include DNF
                             id=id,
                             select_race=select_race.values[0],
                             select_driver=select_driver.values[0],
-                            next_race_id=gp_id) # dnf=False
+                            next_race_id=next_race_id) # dnf=False
             logger.info(f"{ctx.user.name} guess DRIVER successful")
             await sub_interaction.response.send_message(f"<{name}: {select_race.values[0]}: {select_driver.values[0]}: {next_race_name.capitalize()}>",silent=True)
         # check if already guessed this
 
     select_driver.callback = driver_callback
-    select_gp_name.callback = gp_name_callback
     select_race.callback = race_callback
     select_dnf.callback = dnf_callback
     press_button.callback = button_callback
     press_dnf_button.callback = dnf_button_callback
 
-    message = f"Guess for ~~{next_race_name}~~ {datetime.datetime.now().year}\n**(use this form for multiple guesses)**"
+    message = f"Guess for {next_race_name} {datetime.datetime.now().year}\n**(use this form for multiple guesses)**"
     await ctx.followup.send(content=message, view=theView)
     #await ctx.edit_original_response()
 
